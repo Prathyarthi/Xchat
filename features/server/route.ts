@@ -31,9 +31,11 @@ export const conversations = new Elysia({ prefix: '/conversations' })
 
         const recentMessages = await prisma.message.findMany({
             where: { conversationId },
-            orderBy: { createdAt: 'asc' },
+            orderBy: { createdAt: 'desc' },
             take: 20
         })
+
+        const orderedMessages = recentMessages.reverse();
 
         const agentResponse = await generateAgentResponse(conversation.agent, recentMessages)
 
