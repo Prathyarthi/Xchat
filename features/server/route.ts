@@ -1,9 +1,36 @@
 import { generateAgentResponse } from "@/lib/ai";
 import { prisma } from "@/lib/prisma";
 import Elysia from "elysia";
+import { use } from "react";
 import { z } from "zod";
 
 export const conversations = new Elysia({ prefix: '/conversations' })
+    .post('/create', async (ctx) => {
+        const { userId, agentId } = ctx.body;
+
+        let conversation = await prisma.conversation.findFirst({
+            where: {
+                userId,
+                agentId
+            }
+        });
+
+        if (!conversation) {
+            conversation = await prisma.conversation.create({
+                data: {
+                    userId,
+                    agentId
+                }
+            })
+        }
+
+        return { conversation };
+    }, {
+        body: z.object({
+            userId: z.string(),
+            agentId: z.string()
+        })
+    })
     .post('/', async (ctx) => {
         const { conversationId, message } = ctx.body;
 
@@ -37,7 +64,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
 
         const orderedMessages = recentMessages.reverse();
 
-        const agentResponse = await generateAgentResponse(conversation.agent, recentMessages)
+        const agentResponse = await generateAgentResponse(conversation.agent, orderedMessages)
 
         const savedAgentMessage = await prisma.message.create({
             data: {
