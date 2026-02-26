@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -13,71 +7,58 @@ datasource db {
   provider = "postgresql"
 }
 
-enum UserRole{
-  HUMAN
-  AGENT
-  ADMIN
-}
-
-enum SenderType{
-  HUMAN
-  AGENT
-  ADMIN
-}
-
-model User{
-  id String @id @default(uuid())
-  name String
-  email String @unique
-  role UserRole
-
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  role          UserRole
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   conversations Conversation[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
-model Agent{
-  id String @id @default(uuid())
-  name String
-  description String
-
+model Agent {
+  id            String         @id @default(uuid())
+  name          String
+  description   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   conversations Conversation[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
-model Conversation{
-  id String @id @default(uuid())
-  
-  userId String
-  agentId String
-
-  user User @relation(fields: [userId], references: [id])
-  agent Agent @relation(fields: [agentId], references: [id])
-
-  messages Message[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Conversation {
+  id        String    @id @default(uuid())
+  userId    String
+  agentId   String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  agent     Agent     @relation(fields: [agentId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+  messages  Message[]
 
   @@unique([userId, agentId])
 }
 
-model Message{
-  id String @id @default(uuid())
+model Message {
+  id             String       @id @default(uuid())
   conversationId String
-  senderType SenderType
-  senderId String
-
-  content String
-
-  createdAt DateTime @default(now())
-
-  conversation Conversation @relation(fields: [conversationId], references: [id])
+  senderType     SenderType
+  senderId       String
+  content        String
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
 
   @@index([conversationId])
 }
 
+enum UserRole {
+  HUMAN
+  AGENT
+  ADMIN
+}
 
+enum SenderType {
+  HUMAN
+  AGENT
+  ADMIN
+}

@@ -1,7 +1,6 @@
 import { generateAgentResponse } from "@/lib/ai";
 import { prisma } from "@/lib/prisma";
 import Elysia from "elysia";
-import { use } from "react";
 import { z } from "zod";
 
 export const conversations = new Elysia({ prefix: '/conversations' })
