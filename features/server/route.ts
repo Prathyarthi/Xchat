@@ -7,6 +7,22 @@ export const conversations = new Elysia({ prefix: '/conversations' })
     .post('/create', async (ctx) => {
         const { userId, agentId } = ctx.body;
 
+        const user = await prisma.user.findUnique({
+            where: { id: userId }
+        });
+
+        if (!user) {
+            return new Response('User not found', { status: 404 });
+        }
+
+        const agent = await prisma.agent.findUnique({
+            where: { id: agentId }
+        });
+
+        if (!agent) {
+            return new Response('Agent not found', { status: 404 });
+        }
+
         let conversation = await prisma.conversation.findFirst({
             where: {
                 userId,
