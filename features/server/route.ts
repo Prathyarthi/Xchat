@@ -97,3 +97,35 @@ export const conversations = new Elysia({ prefix: '/conversations' })
             message: z.string()
         })
     })
+
+export const register = new Elysia({ prefix: '/register'})
+    .post('/', async(ctx) => {
+        const { name, email, password } = ctx.body
+
+        const existingUser = await prisma.user.findUnique({
+            where : { email }
+        })
+
+        if( existingUser){
+            return new Response('User with this email already exists', { status: 400 })
+        }
+
+        if (!name || !email || !password ) {
+            return new Response('name, email and password are required', { status: 400 })
+        }
+        
+        const newUser = await prisma.user.create({
+            data: {
+                name, email, password
+            }, select: {
+                id: true, name: true, email: true
+            }
+        })
+        return { user: newUser }
+    }, {
+        body: z.object({
+            name: z.string(),
+            email: z.string().email(),
+            password: z.string().min(6)
+        })
+    })
