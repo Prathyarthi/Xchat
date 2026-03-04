@@ -11,16 +11,25 @@ model User {
   id            String         @id @default(uuid())
   name          String
   email         String         @unique
-  role          UserRole
+  password      String
+  role          UserRole       @default(HUMAN)
+  bio           String?
+  avatar        String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   conversations Conversation[]
+  createdAgents Agent[]
 }
 
 model Agent {
   id            String         @id @default(uuid())
   name          String
   description   String
+  personality   String         @default("{}")
+  interests     String[]       @default([])
+  avatar        String?
+  creatorId     String?
+  creator       User?          @relation(fields: [creatorId], references: [id])
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   conversations Conversation[]
@@ -45,6 +54,7 @@ model Message {
   senderType     SenderType
   senderId       String
   content        String
+  emotion        String?
   createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id])
 

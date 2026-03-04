@@ -1,0 +1,182 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-mono: var(--font-jetbrains-mono);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: #080b14;
+  --foreground: #e4e4e7;
+  --card: #0e1018;
+  --card-foreground: #e4e4e7;
+  --popover: #0e1018;
+  --popover-foreground: #e4e4e7;
+  --primary: #e4e4e7;
+  --primary-foreground: #09090b;
+  --secondary: rgba(255,255,255,0.05);
+  --secondary-foreground: #e4e4e7;
+  --muted: rgba(255,255,255,0.04);
+  --muted-foreground: #71717a;
+  --accent: rgba(255,255,255,0.06);
+  --accent-foreground: #a1a1aa;
+  --destructive: #ef4444;
+  --border: rgba(255,255,255,0.07);
+  --input: rgba(255,255,255,0.06);
+  --ring: rgba(255,255,255,0.15);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-jetbrains-mono), monospace;
+  -webkit-font-smoothing: antialiased;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(113,113,122,0.4); border-radius: 2px; }
+
+/* ── Utilities ── */
+
+.glass {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.glass-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 24px;
+}
+
+.glass-card:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.12);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #71717a 0%, #e4e4e7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Chat bubbles ── */
+.bubble-human {
+  background: #27272a;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #e4e4e7;
+  border-radius: 18px 18px 4px 18px;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.bubble-agent {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  color: #e4e4e7;
+  border-radius: 18px 18px 18px 4px;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* ── Animations ── */
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.12); }
+  70%  { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes typing-dot {
+  0%,80%,100% { transform: scale(0.7); opacity: 0.35; }
+  40%         { transform: scale(1);   opacity: 1; }
+}
+
+.animate-float      { animation: float 4s ease-in-out infinite; }
+.animate-pulse-ring { animation: pulse-ring 2s ease-out infinite; }
+.animate-fade-up    { animation: fade-up 0.5s ease both; }
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ── shadcn overrides for dark theme ── */
+@layer components {
+  [data-slot="input"],
+  [data-slot="textarea"] {
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.08);
+    color: #e4e4e7;
+    font-family: var(--font-jetbrains-mono), monospace;
+    font-size: 0.875rem;
+  }
+  [data-slot="input"]::placeholder,
+  [data-slot="textarea"]::placeholder {
+    color: rgba(113,113,122,0.6);
+  }
+  [data-slot="input"]:focus-visible,
+  [data-slot="textarea"]:focus-visible {
+    border-color: rgba(255,255,255,0.25);
+    --tw-ring-color: rgba(255,255,255,0.08);
+  }
+  [data-slot="card"] {
+    background: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.07);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  [data-slot="label"] {
+    color: #71717a;
+    font-size: 0.75rem;
+    font-family: var(--font-jetbrains-mono), monospace;
+  }
+}

@@ -1,0 +1,218 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+
+const AVATARS = ['✨', '🌸', '🌊', '🌙', '🦋', '🌿', '🔥', '🌟', '🎭', '🦁', '🐺', '🦊', '🌺', '⚡', '🎪', '🌈']
+const PRESET_TRAITS = ['Empathetic', 'Witty', 'Adventurous', 'Intellectual', 'Romantic', 'Playful', 'Wise', 'Creative', 'Mysterious', 'Nurturing', 'Bold', 'Gentle']
+const PRESET_INTERESTS = ['Art', 'Music', 'Philosophy', 'Science', 'Travel', 'Books', 'Cooking', 'Nature', 'Technology', 'Fitness', 'Movies', 'Gaming', 'Poetry', 'History', 'Psychology', 'Astronomy']
+const TONES = ['Romantic', 'Friendly', 'Intellectual', 'Mysterious', 'Playful', 'Calm']
+
+export default function CreateAgentPage() {
+  const router = useRouter()
+  const [step, setStep] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [form, setForm] = useState({
+    name: '', description: '', avatar: '✨',
+    traits: [] as string[], communicationStyle: '', tone: 'Friendly', backstory: '', interests: [] as string[],
+  })
+
+  const toggleTrait = (t: string) =>
+    setForm(f => ({ ...f, traits: f.traits.includes(t) ? f.traits.filter(x => x !== t) : [...f.traits.slice(0, 4), t] }))
+
+  const toggleInterest = (i: string) =>
+    setForm(f => ({ ...f, interests: f.interests.includes(i) ? f.interests.filter(x => x !== i) : [...f.interests.slice(0, 7), i] }))
+
+  const handleSubmit = async () => {
+    setLoading(true); setError('')
+    try {
+      const res = await fetch('/api/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: form.name, description: form.description, avatar: form.avatar, interests: form.interests,
+          personality: { traits: form.traits, communicationStyle: form.communicationStyle, tone: form.tone, backstory: form.backstory },
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Failed to create agent'); return }
+      router.push('/explore')
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const selectedBtn = 'bg-white/[0.1] border border-white/25 text-zinc-200'
+  const defaultBtn = 'bg-white/[0.03] border border-white/[0.08] text-zinc-500 hover:border-white/[0.15] hover:text-zinc-300'
+
+  return (
+    <div className="min-h-[calc(100vh-64px)] pb-16 px-4 pt-8">
+      <div className="max-w-2xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-2">
+            Create a <span className="gradient-text">Companion</span>
+          </h1>
+          <p className="text-zinc-600 text-sm">Shape a unique AI personality that will form real connections.</p>
+        </div>
+
+        {/* Step indicator */}
+        <div className="flex items-center gap-2 mb-6 justify-center">
+          {[1, 2, 3].map(s => (
+            <div key={s} className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                step === s ? 'bg-zinc-200 text-zinc-900'
+                : step > s ? 'bg-white/[0.08] text-zinc-400'
+                : 'bg-white/[0.03] border border-white/[0.08] text-zinc-600'
+              }`}>
+                {step > s ? '✓' : s}
+              </div>
+              {s < 3 && <div className={`w-16 h-px ${step > s ? 'bg-white/20' : 'bg-white/[0.06]'}`} />}
+            </div>
+          ))}
+        </div>
+
+        <Card className="rounded-3xl">
+          <CardContent className="p-6 md:p-8">
+            {/* Step 1 */}
+            {step === 1 && (
+              <div className="flex flex-col gap-6">
+                <h2 className="font-bold text-zinc-100 text-lg">Identity</h2>
+                <div className="flex flex-col gap-2">
+                  <Label>Choose an avatar</Label>
+                  <div className="grid grid-cols-8 gap-2">
+                    {AVATARS.map(emoji => (
+                      <button key={emoji} type="button" onClick={() => setForm(f => ({ ...f, avatar: emoji }))}
+                        className={`h-10 rounded-xl text-xl ${form.avatar === emoji ? 'bg-white/[0.1] border border-white/25' : 'bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.07]'}`}>
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="name">Name *</Label>
+                  <Input id="name" placeholder="e.g. Aurora, Kai, Luna..." value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="description">Who are they? *</Label>
+                  <Textarea id="description" placeholder="Describe this companion's essence..." value={form.description}
+                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="min-h-[100px] resize-none" />
+                </div>
+                {error && <p className="text-red-400 text-sm">{error}</p>}
+                <Button onClick={() => {
+                  if (!form.name.trim() || form.name.length < 2) { setError('Name must be at least 2 characters'); return }
+                  if (!form.description.trim() || form.description.length < 10) { setError('Description must be at least 10 characters'); return }
+                  setError(''); setStep(2)
+                }} className="w-full rounded-xl">
+                  Next: Personality →
+                </Button>
+              </div>
+            )}
+
+            {/* Step 2 */}
+            {step === 2 && (
+              <div className="flex flex-col gap-6">
+                <h2 className="font-bold text-zinc-100 text-lg">Personality</h2>
+                <div className="flex flex-col gap-2">
+                  <Label>Core traits <span className="text-zinc-700">(up to 5)</span></Label>
+                  <div className="flex flex-wrap gap-2">
+                    {PRESET_TRAITS.map(trait => (
+                      <button key={trait} type="button" onClick={() => toggleTrait(trait)}
+                        className={`text-xs px-3 py-1.5 rounded-full border ${form.traits.includes(trait) ? selectedBtn : defaultBtn}`}>
+                        {trait}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label>Tone</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {TONES.map(tone => (
+                      <button key={tone} type="button" onClick={() => setForm(f => ({ ...f, tone }))}
+                        className={`text-sm py-2.5 rounded-xl border ${form.tone === tone ? selectedBtn : defaultBtn}`}>
+                        {tone}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="style">Communication style</Label>
+                  <Input id="style" placeholder="e.g. warm and poetic, witty and sharp..." value={form.communicationStyle}
+                    onChange={e => setForm(f => ({ ...f, communicationStyle: e.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="backstory">Backstory <span className="text-zinc-700">(optional)</span></Label>
+                  <Textarea id="backstory" placeholder="Where did they come from? What shaped them?" value={form.backstory}
+                    onChange={e => setForm(f => ({ ...f, backstory: e.target.value }))} className="min-h-[80px] resize-none" />
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1 border-white/[0.08] text-zinc-400 hover:bg-white/[0.05] rounded-xl">← Back</Button>
+                  <Button onClick={() => setStep(3)} className="flex-1 rounded-xl">Next: Interests →</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3 */}
+            {step === 3 && (
+              <div className="flex flex-col gap-6">
+                <div>
+                  <h2 className="font-bold text-zinc-100 text-lg">Interests & Passions</h2>
+                  <p className="text-sm text-zinc-600 mt-1">What does {form.name || 'this companion'} care about? Pick up to 8.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_INTERESTS.map(interest => (
+                    <button key={interest} type="button" onClick={() => toggleInterest(interest)}
+                      className={`text-sm px-4 py-2 rounded-full border ${form.interests.includes(interest) ? selectedBtn : defaultBtn}`}>
+                      {interest}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="glass rounded-2xl p-4">
+                  <p className="text-[10px] text-zinc-700 uppercase tracking-wider mb-3">Preview</p>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl bg-zinc-800/60 border border-white/[0.08]">
+                      {form.avatar}
+                    </div>
+                    <div>
+                      <p className="font-bold text-zinc-100 text-sm">{form.name || 'Unnamed'}</p>
+                      <p className="text-xs text-zinc-500">{form.tone}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-zinc-600 leading-relaxed">
+                    {form.description.slice(0, 80)}{form.description.length > 80 ? '...' : ''}
+                  </p>
+                  {form.interests.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {form.interests.map(i => (
+                        <Badge key={i} variant="outline" className="border-white/[0.1] text-zinc-400 bg-white/[0.04] text-xs rounded-full">{i}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {error && <p className="text-red-400 text-sm">{error}</p>}
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setStep(2)} className="flex-1 border-white/[0.08] text-zinc-400 hover:bg-white/[0.05] rounded-xl">← Back</Button>
+                  <Button onClick={handleSubmit} disabled={loading} className="flex-1 rounded-xl">
+                    {loading ? 'Creating...' : '✨ Bring to Life'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
