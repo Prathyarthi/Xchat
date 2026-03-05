@@ -22,17 +22,18 @@ model User {
 }
 
 model Agent {
-  id            String         @id @default(uuid())
-  name          String
-  description   String
-  personality   String         @default("{}")
-  interests     String[]       @default([])
-  avatar        String?
-  creatorId     String?
-  creator       User?          @relation(fields: [creatorId], references: [id])
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  conversations Conversation[]
+  id               String           @id @default(uuid())
+  name             String
+  description      String
+  personality      String           @default("{}")
+  interests        String[]         @default([])
+  avatar           String?
+  relationshipType RelationshipType @default(BESTIE)
+  creatorId        String?
+  creator          User?            @relation(fields: [creatorId], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  conversations    Conversation[]
 }
 
 model Conversation {
@@ -59,6 +60,13 @@ model Message {
   conversation   Conversation @relation(fields: [conversationId], references: [id])
 
   @@index([conversationId])
+}
+
+enum RelationshipType {
+  ROMANTIC
+  BESTIE
+  MENTOR
+  SUPPORT
 }
 
 enum UserRole {

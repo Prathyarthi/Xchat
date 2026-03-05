@@ -27,7 +27,7 @@ export const agents = new Elysia({ prefix: '/agents' })
       const session = await getSession(ctx.request)
       if (!session) { ctx.set.status = 401; return { error: 'Not authenticated' } }
 
-      const { name, description, personality, interests, avatar } = ctx.body
+      const { name, description, personality, interests, avatar, relationshipType } = ctx.body
 
       const agent = await prisma.agent.create({
         data: {
@@ -36,6 +36,7 @@ export const agents = new Elysia({ prefix: '/agents' })
           personality: JSON.stringify(personality),
           interests: interests ?? [],
           avatar: avatar ?? null,
+          relationshipType: (relationshipType as any) ?? 'BESTIE',
           creatorId: session.userId,
         },
       })
@@ -54,6 +55,7 @@ export const agents = new Elysia({ prefix: '/agents' })
         }),
         interests: t.Optional(t.Array(t.String())),
         avatar: t.Optional(t.String()),
+        relationshipType: t.Optional(t.String()),
       }),
     }
   )

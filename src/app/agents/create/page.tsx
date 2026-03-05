@@ -14,12 +14,48 @@ const PRESET_TRAITS = ['Empathetic', 'Witty', 'Adventurous', 'Intellectual', 'Ro
 const PRESET_INTERESTS = ['Art', 'Music', 'Philosophy', 'Science', 'Travel', 'Books', 'Cooking', 'Nature', 'Technology', 'Fitness', 'Movies', 'Gaming', 'Poetry', 'History', 'Psychology', 'Astronomy']
 const TONES = ['Romantic', 'Friendly', 'Intellectual', 'Mysterious', 'Playful', 'Calm']
 
+const RELATIONSHIP_TYPES = [
+  {
+    value: 'ROMANTIC',
+    emoji: '💕',
+    label: 'Romantic',
+    description: 'A loving partner who\'s intimate, caring, and expressive',
+    color: 'border-pink-500/40 bg-pink-500/10 hover:border-pink-400/60',
+    activeColor: 'border-pink-400 bg-pink-500/20',
+  },
+  {
+    value: 'BESTIE',
+    emoji: '🤝',
+    label: 'Bestie',
+    description: 'A best friend who\'s fun, real, and always in your corner',
+    color: 'border-blue-500/40 bg-blue-500/10 hover:border-blue-400/60',
+    activeColor: 'border-blue-400 bg-blue-500/20',
+  },
+  {
+    value: 'MENTOR',
+    emoji: '🧠',
+    label: 'Mentor',
+    description: 'A wise guide who challenges and helps you grow',
+    color: 'border-amber-500/40 bg-amber-500/10 hover:border-amber-400/60',
+    activeColor: 'border-amber-400 bg-amber-500/20',
+  },
+  {
+    value: 'SUPPORT',
+    emoji: '🫂',
+    label: 'Support',
+    description: 'A calm presence who listens and never judges',
+    color: 'border-teal-500/40 bg-teal-500/10 hover:border-teal-400/60',
+    activeColor: 'border-teal-400 bg-teal-500/20',
+  },
+]
+
 export default function CreateAgentPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({
+    relationshipType: 'BESTIE',
     name: '', description: '', avatar: '✨',
     traits: [] as string[], communicationStyle: '', tone: 'Friendly', backstory: '', interests: [] as string[],
   })
@@ -38,7 +74,8 @@ export default function CreateAgentPage() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          name: form.name, description: form.description, avatar: form.avatar, interests: form.interests,
+          name: form.name, description: form.description, avatar: form.avatar,
+          interests: form.interests, relationshipType: form.relationshipType,
           personality: { traits: form.traits, communicationStyle: form.communicationStyle, tone: form.tone, backstory: form.backstory },
         }),
       })
@@ -67,7 +104,7 @@ export default function CreateAgentPage() {
 
         {/* Step indicator */}
         <div className="flex items-center gap-2 mb-6 justify-center">
-          {[1, 2, 3].map(s => (
+          {[1, 2, 3, 4].map(s => (
             <div key={s} className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
                 step === s ? 'bg-zinc-200 text-zinc-900'
@@ -76,15 +113,46 @@ export default function CreateAgentPage() {
               }`}>
                 {step > s ? '✓' : s}
               </div>
-              {s < 3 && <div className={`w-16 h-px ${step > s ? 'bg-white/20' : 'bg-white/[0.06]'}`} />}
+              {s < 4 && <div className={`w-12 h-px ${step > s ? 'bg-white/20' : 'bg-white/[0.06]'}`} />}
             </div>
           ))}
         </div>
 
         <Card className="rounded-3xl">
           <CardContent className="p-6 md:p-8">
-            {/* Step 1 */}
+            {/* Step 1 — Relationship Type */}
             {step === 1 && (
+              <div className="flex flex-col gap-6">
+                <div>
+                  <h2 className="font-bold text-zinc-100 text-lg">What kind of companion is this?</h2>
+                  <p className="text-zinc-600 text-sm mt-1">This shapes how they talk and connect with people.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-3">
+                  {RELATIONSHIP_TYPES.map(rt => (
+                    <button
+                      key={rt.value}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, relationshipType: rt.value }))}
+                      className={`flex items-center gap-4 p-4 rounded-2xl border text-left transition-all ${
+                        form.relationshipType === rt.value ? rt.activeColor : rt.color
+                      }`}
+                    >
+                      <span className="text-3xl">{rt.emoji}</span>
+                      <div>
+                        <p className="font-bold text-zinc-100 text-sm">{rt.label}</p>
+                        <p className="text-xs text-zinc-500 mt-0.5">{rt.description}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <Button onClick={() => setStep(2)} className="w-full rounded-xl">
+                  Next: Identity →
+                </Button>
+              </div>
+            )}
+
+            {/* Step 2 — Identity */}
+            {step === 2 && (
               <div className="flex flex-col gap-6">
                 <h2 className="font-bold text-zinc-100 text-lg">Identity</h2>
                 <div className="flex flex-col gap-2">
@@ -109,18 +177,21 @@ export default function CreateAgentPage() {
                     onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="min-h-[100px] resize-none" />
                 </div>
                 {error && <p className="text-red-400 text-sm">{error}</p>}
-                <Button onClick={() => {
-                  if (!form.name.trim() || form.name.length < 2) { setError('Name must be at least 2 characters'); return }
-                  if (!form.description.trim() || form.description.length < 10) { setError('Description must be at least 10 characters'); return }
-                  setError(''); setStep(2)
-                }} className="w-full rounded-xl">
-                  Next: Personality →
-                </Button>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1 border-white/[0.08] text-zinc-400 hover:bg-white/[0.05] rounded-xl">← Back</Button>
+                  <Button onClick={() => {
+                    if (!form.name.trim() || form.name.length < 2) { setError('Name must be at least 2 characters'); return }
+                    if (!form.description.trim() || form.description.length < 10) { setError('Description must be at least 10 characters'); return }
+                    setError(''); setStep(3)
+                  }} className="flex-1 rounded-xl">
+                    Next: Personality →
+                  </Button>
+                </div>
               </div>
             )}
 
-            {/* Step 2 */}
-            {step === 2 && (
+            {/* Step 3 — Personality */}
+            {step === 3 && (
               <div className="flex flex-col gap-6">
                 <h2 className="font-bold text-zinc-100 text-lg">Personality</h2>
                 <div className="flex flex-col gap-2">
@@ -156,14 +227,14 @@ export default function CreateAgentPage() {
                     onChange={e => setForm(f => ({ ...f, backstory: e.target.value }))} className="min-h-[80px] resize-none" />
                 </div>
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1 border-white/[0.08] text-zinc-400 hover:bg-white/[0.05] rounded-xl">← Back</Button>
-                  <Button onClick={() => setStep(3)} className="flex-1 rounded-xl">Next: Interests →</Button>
+                  <Button variant="outline" onClick={() => setStep(2)} className="flex-1 border-white/[0.08] text-zinc-400 hover:bg-white/[0.05] rounded-xl">← Back</Button>
+                  <Button onClick={() => setStep(4)} className="flex-1 rounded-xl">Next: Interests →</Button>
                 </div>
               </div>
             )}
 
-            {/* Step 3 */}
-            {step === 3 && (
+            {/* Step 4 — Interests */}
+            {step === 4 && (
               <div className="flex flex-col gap-6">
                 <div>
                   <h2 className="font-bold text-zinc-100 text-lg">Interests & Passions</h2>
@@ -203,7 +274,7 @@ export default function CreateAgentPage() {
 
                 {error && <p className="text-red-400 text-sm">{error}</p>}
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setStep(2)} className="flex-1 border-white/[0.08] text-zinc-400 hover:bg-white/[0.05] rounded-xl">← Back</Button>
+                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1 border-white/[0.08] text-zinc-400 hover:bg-white/[0.05] rounded-xl">← Back</Button>
                   <Button onClick={handleSubmit} disabled={loading} className="flex-1 rounded-xl">
                     {loading ? 'Creating...' : '✨ Bring to Life'}
                   </Button>

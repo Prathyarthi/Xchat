@@ -80,16 +80,18 @@ export const conversations = new Elysia({ prefix: '/conversations' })
 
       const recentMessages = await prisma.message.findMany({
         where: { conversationId },
-        orderBy: { createdAt: 'asc' },
+        orderBy: { createdAt: 'desc' },
         take: 20,
       })
+      recentMessages.reverse()
 
       let agentResponse: string
       try {
         agentResponse = await generateAgentResponse(
           conversation.agent as any,
           recentMessages,
-          userEmotion
+          userEmotion,
+          session.name
         )
       } catch (err) {
         console.error('[AI Error]', err)

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useAuth } from '@/features/auth/components/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,12 +16,22 @@ interface Agent {
   personality: string
   interests: string[]
   avatar: string | null
+  relationshipType: string | null
   _count: { conversations: number }
 }
 
-function AgentCard({ agent, onConnect }: { agent: Agent; onConnect: (id: string) => void }) {
+const RELATIONSHIP_BADGES: Record<string, { label: string; className: string }> = {
+  ROMANTIC: { label: '💕 Romantic', className: 'border-pink-500/40 text-pink-400 bg-pink-500/10' },
+  BESTIE:   { label: '🤝 Bestie',   className: 'border-blue-500/40 text-blue-400 bg-blue-500/10' },
+  MENTOR:   { label: '🧠 Mentor',   className: 'border-amber-500/40 text-amber-400 bg-amber-500/10' },
+  SUPPORT:  { label: '🫂 Support',  className: 'border-teal-500/40 text-teal-400 bg-teal-500/10' },
+}
+
+function AgentCard({ agent }: { agent: Agent }) {
   let personality: any = {}
   try { personality = JSON.parse(agent.personality || '{}') } catch {}
+
+  const badge = agent.relationshipType ? RELATIONSHIP_BADGES[agent.relationshipType] : null
 
   return (
     <Card className="rounded-3xl flex flex-col gap-0 py-0 overflow-hidden">
@@ -31,8 +42,10 @@ function AgentCard({ agent, onConnect }: { agent: Agent; onConnect: (id: string)
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-zinc-100 text-base leading-tight">{agent.name}</h3>
-            {personality.tone && (
-              <span className="text-xs text-zinc-500">{personality.tone}</span>
+            {badge && (
+              <span className={`inline-block text-xs px-2 py-0.5 rounded-full border mt-1 ${badge.className}`}>
+                {badge.label}
+              </span>
             )}
             <p className="text-xs text-zinc-700 mt-0.5">
               {agent._count.conversations} {agent._count.conversations === 1 ? 'connection' : 'connections'}
@@ -64,8 +77,8 @@ function AgentCard({ agent, onConnect }: { agent: Agent; onConnect: (id: string)
           </div>
         )}
 
-        <Button onClick={() => onConnect(agent.id)} className="w-full mt-auto rounded-xl">
-          Start Chatting
+        <Button asChild className="w-full mt-auto rounded-xl">
+          <Link href={`/agents/${agent.id}`}>View Profile</Link>
         </Button>
       </CardContent>
     </Card>
@@ -78,7 +91,6 @@ export default function ExplorePage() {
   const [agents, setAgents] = useState<Agent[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [connecting, setConnecting] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/agents', { credentials: 'include' })
@@ -86,23 +98,6 @@ export default function ExplorePage() {
       .then(data => setAgents(data.agents || []))
       .finally(() => setLoading(false))
   }, [])
-
-  const handleConnect = async (agentId: string) => {
-    if (!user) { router.push('/sign-in'); return }
-    setConnecting(agentId)
-    try {
-      const res = await fetch('/api/conversations/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ agentId }),
-      })
-      const data = await res.json()
-      if (res.ok) router.push(`/chat/${data.conversation.id}`)
-    } finally {
-      setConnecting(null)
-    }
-  }
 
   const filtered = agents.filter(a =>
     a.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -157,9 +152,7 @@ export default function ExplorePage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtered.map(agent => (
-              <div key={agent.id} className={connecting === agent.id ? 'opacity-60 pointer-events-none' : ''}>
-                <AgentCard agent={agent} onConnect={handleConnect} />
-              </div>
+              <AgentCard key={agent.id} agent={agent} />
             ))}
           </div>
         )}

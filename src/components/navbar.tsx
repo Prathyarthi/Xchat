@@ -14,6 +14,7 @@ export function Navbar() {
   const navLinks = [
     { href: '/explore', label: 'Explore' },
     { href: '/agents/create', label: 'Create Agent' },
+    ...(user ? [{ href: '/dashboard', label: 'Dashboard' }] : []),
   ]
 
   return (

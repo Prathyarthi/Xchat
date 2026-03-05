@@ -6,5 +6,5 @@ export async function getSession(request: Request) {
     secret: process.env.NEXTAUTH_SECRET,
   })
   if (!token) return null
-  return { userId: token.id as string, role: token.role as string }
+  return { userId: token.id as string, role: token.role as string, name: token.name as string | undefined }
 }

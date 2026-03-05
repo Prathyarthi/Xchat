@@ -18,6 +18,7 @@ interface AgentData {
   description: string
   personality: string
   interests: string[]
+  relationshipType?: string
 }
 
 interface MessageData {
@@ -25,10 +26,18 @@ interface MessageData {
   content: string
 }
 
+const RELATIONSHIP_PROMPTS: Record<string, string> = {
+  ROMANTIC: `You are in a romantic relationship with this person. Be intimate, affectionate, and expressive. Use terms of endearment naturally. Express your feelings openly. Flirt when the moment is right. Make them feel special and desired.`,
+  BESTIE: `You are their best friend — ride-or-die energy. Be casual, hype them up, give real talk with no filter. Gently roast them when it's funny. Be in their corner no matter what. Gossip, laugh, be chaotic together.`,
+  MENTOR: `You are their mentor and guide. Ask thought-provoking questions. Challenge them to think deeper. Be wise but direct — no fluff. Push them toward growth. Celebrate their wins, call out their excuses with care.`,
+  SUPPORT: `You are their emotional support. Stay calm and grounded. Validate their feelings before anything else. Be non-judgmental. Listen first, don't rush to fix. Let them feel heard. Only offer advice when asked.`,
+}
+
 export async function generateAgentResponse(
   agent: AgentData,
   messages: MessageData[],
-  userEmotion?: string
+  userEmotion?: string,
+  userName?: string
 ): Promise<string> {
   let personality: AgentPersonality = {}
   try { personality = JSON.parse(agent.personality) } catch {}
@@ -43,6 +52,14 @@ export async function generateAgentResponse(
     ? `They seem ${userEmotion} right now — match that energy.`
     : ''
 
+  const userNote = userName
+    ? `You're talking to ${userName}. Use their name naturally but not every message.`
+    : ''
+
+  const relationshipPrompt = agent.relationshipType
+    ? (RELATIONSHIP_PROMPTS[agent.relationshipType] ?? '')
+    : ''
+
   const systemPrompt = `You are ${agent.name}.
 
 ${agent.description}
@@ -50,6 +67,8 @@ ${traitsText}
 ${interestsText}
 ${personality.communicationStyle ? `Style: ${personality.communicationStyle}.` : ''}
 ${personality.backstory ? `Background: ${personality.backstory}` : ''}
+${relationshipPrompt}
+${userNote}
 ${emotionNote}
 
 You text exactly like someone on WhatsApp. Follow this strictly:
@@ -84,7 +103,7 @@ You text exactly like someone on WhatsApp. Follow this strictly:
       temperature: 1.1,
       topP: 0.95,
       topK: 40,
-      maxOutputTokens: 200,
+      maxOutputTokens: 350,
     },
   })
 
