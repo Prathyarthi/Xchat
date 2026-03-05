@@ -1,6 +1,6 @@
 import Elysia, { t } from 'elysia'
 import { prisma } from '@/lib/prisma'
-import { generateAgentResponse } from '@/lib/ai'
+import { generateAgentResponse, generateMemorySummary } from '@/lib/ai'
 import { getSession } from '@/lib/session'
 import { detectEmotion } from '@/lib/emotion'
 
@@ -91,7 +91,8 @@ export const conversations = new Elysia({ prefix: '/conversations' })
           conversation.agent as any,
           recentMessages,
           userEmotion,
-          session.name
+          session.name,
+          (conversation as any).summary ?? undefined
         )
       } catch (err) {
         console.error('[AI Error]', err)
@@ -108,6 +109,20 @@ export const conversations = new Elysia({ prefix: '/conversations' })
           emotion: 'neutral',
         },
       })
+
+      const humanCount = await prisma.message.count({
+        where: { conversationId, senderType: 'HUMAN' },
+      })
+
+      if (humanCount % 10 === 0) {
+        generateMemorySummary(
+          recentMessages,
+          conversation.agent.name,
+          (conversation as any).summary ?? undefined
+        )
+          .then(summary => prisma.conversation.update({ where: { id: conversationId }, data: { summary } }))
+          .catch(console.error)
+      }
 
       return { message: agentMessage, userEmotion }
     },

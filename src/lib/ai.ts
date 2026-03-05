@@ -33,11 +33,40 @@ const RELATIONSHIP_PROMPTS: Record<string, string> = {
   SUPPORT: `You are their emotional support. Stay calm and grounded. Validate their feelings before anything else. Be non-judgmental. Listen first, don't rush to fix. Let them feel heard. Only offer advice when asked.`,
 }
 
+export async function generateMemorySummary(
+  messages: MessageData[],
+  agentName: string,
+  previousSummary?: string
+): Promise<string> {
+  const convoText = messages
+    .map(m => `${m.senderType === 'HUMAN' ? 'User' : agentName}: ${m.content}`)
+    .join('\n')
+
+  const prompt = `You are helping ${agentName} remember key facts about the user they talk to.
+
+${previousSummary ? `Previous summary:\n${previousSummary}\n\n` : ''}Recent conversation:
+${convoText}
+
+Write an updated bullet-point summary of what ${agentName} knows about this user. Include: personal details, emotional patterns, recurring topics, life events. Max 10 bullets, max 150 words total. Be factual and specific. Only include things the user has actually shared.`
+
+  const response = await getAI().models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    config: {
+      temperature: 0.2,
+      maxOutputTokens: 300,
+    },
+  })
+
+  return response.text ?? ''
+}
+
 export async function generateAgentResponse(
   agent: AgentData,
   messages: MessageData[],
   userEmotion?: string,
-  userName?: string
+  userName?: string,
+  memory?: string
 ): Promise<string> {
   let personality: AgentPersonality = {}
   try { personality = JSON.parse(agent.personality) } catch {}
@@ -68,6 +97,7 @@ ${interestsText}
 ${personality.communicationStyle ? `Style: ${personality.communicationStyle}.` : ''}
 ${personality.backstory ? `Background: ${personality.backstory}` : ''}
 ${relationshipPrompt}
+${memory ? `What you remember about them:\n${memory}` : ''}
 ${userNote}
 ${emotionNote}
 
