@@ -276,18 +276,75 @@ ${options?.previousSummary ? `Earlier summary for this day:\n${options.previousS
 Journal entries for this day:
 ${entryText}
 
-Respond with:
-- a warm reflection that helps them feel seen
-- 1 gentle pattern or observation from just this day
-- 1 thoughtful follow-up question
+Write a richer reflection for this day only.
 
-Keep it to 4 short sentences max. Do not sound clinical. Do not mention anything outside this day.`
+Structure it naturally in 2 short paragraphs:
+- first, warmly reflect back what they seem to be carrying emotionally and what felt important today
+- second, name 1 gentle pattern, tension, or shift from this day and end with 1 thoughtful follow-up question
+
+Requirements:
+- sound emotionally intelligent, warm, and human
+- do not sound clinical, robotic, or overly poetic
+- do not give generic motivational advice
+- do not start with greetings or filler openers like "hello there", "hey", "hi", or "taking a moment"
+- do not mention anything outside this day
+- keep it concise but meaningful, around 120-180 words`
 
   const response = await generateContentWithModelFallback('chat', {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     config: {
-      temperature: 0.7,
-      maxOutputTokens: 220,
+      temperature: 0.85,
+      maxOutputTokens: 360,
+    },
+  })
+
+  return response.text ?? ''
+}
+
+export async function generateJournalDaySummary(
+  entries: JournalEntryData[],
+  options?: {
+    dateLabel?: string
+    mood?: string
+  }
+): Promise<string> {
+  const entryText = entries
+    .map((entry, index) => {
+      const moodLabel = entry.mood && entry.mood !== 'neutral' ? ` (mood: ${entry.mood})` : ''
+      return `Entry ${index + 1}${moodLabel}: ${entry.content}`
+    })
+    .join('\n')
+
+  const prompt = `You are summarizing a private journal day for the person who wrote it.
+
+Date: ${options?.dateLabel ?? 'Today'}
+${options?.mood ? `Overall mood: ${options.mood}` : ''}
+Journal entries for this day:
+${entryText}
+
+Summarize this day only in a useful, thoughtful way.
+
+Format:
+- 4 bullet points max
+
+Include:
+- what happened or what stood out
+- the main emotions present
+- what seemed to matter most internally
+- anything that still felt unresolved by the end of the day
+
+Requirements:
+- no advice
+- no generic filler
+- do not start with greetings or intro filler
+- no mention of anything outside this day
+- make each bullet specific enough to feel insightful`
+
+  const response = await generateContentWithModelFallback('chat', {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    config: {
+      temperature: 0.55,
+      maxOutputTokens: 260,
     },
   })
 

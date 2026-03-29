@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -38,6 +38,8 @@ const MOOD_OPTIONS = [
   { value: 'neutral', label: 'Neutral' },
 ]
 
+type JournalAction = 'reflect' | 'summarize'
+
 export default function JournalDayPage() {
   const { date } = useParams() as { date: string }
   const { user, loading: authLoading } = useAuth()
@@ -47,7 +49,10 @@ export default function JournalDayPage() {
   const [mood, setMood] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [runningAction, setRunningAction] = useState<JournalAction | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [aiOutput, setAiOutput] = useState<string | null>(null)
+  const [lastAction, setLastAction] = useState<JournalAction | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/sign-in')
@@ -64,14 +69,12 @@ export default function JournalDayPage() {
           throw new Error(data.error || 'Failed to load journal day.')
         }
         setDay(data.day)
+        setAiOutput(null)
+        setLastAction(null)
       })
       .catch(err => setError(err instanceof Error ? err.message : 'Failed to load journal day.'))
       .finally(() => setLoading(false))
   }, [date, user])
-
-  const latestReflection = useMemo(() => {
-    return [...(day?.entries ?? [])].reverse().find(item => item.aiReflection)?.aiReflection ?? null
-  }, [day])
 
   const handleSave = async () => {
     const content = entry.trim()
@@ -107,6 +110,38 @@ export default function JournalDayPage() {
     }
   }
 
+  const runAction = async (action: JournalAction) => {
+    setRunningAction(action)
+    setError(null)
+
+    try {
+      const res = await fetch(`/api/journal/${date}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to run journal AI action.')
+      }
+
+      setAiOutput(data.output)
+      setLastAction(action)
+
+      const refresh = await fetch(`/api/journal/${date}`, { credentials: 'include' })
+      const refreshData = await refresh.json()
+      if (refresh.ok) {
+        setDay(refreshData.day)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to run journal AI action.')
+    } finally {
+      setRunningAction(null)
+    }
+  }
+
   if (authLoading || !user) {
     return (
       <div className="min-h-[calc(100vh-64px)] flex items-center justify-center">
@@ -129,10 +164,10 @@ export default function JournalDayPage() {
               {getDateLabel(date)}
             </h1>
             <p className="text-zinc-600 text-sm mt-1">
-              Write about this day. AI reflections stay scoped to this date.
+              Save entries privately first, then choose what kind of AI help you want for this day.
             </p>
           </div>
-          <Button asChild variant="outline" className="rounded-full border-white/[0.08] text-zinc-400 hover:bg-white/[0.05]">
+          <Button asChild variant="outline" className="rounded-full border-white/8 text-zinc-400 hover:bg-white/5">
             <Link href={`/journal/${new Date().toISOString().slice(0, 10)}`}>Open today</Link>
           </Button>
         </div>
@@ -147,7 +182,7 @@ export default function JournalDayPage() {
                     <p className="text-sm text-zinc-600 mt-1">Capture what happened, what you felt, and what you need.</p>
                   </div>
                   {dayMood && (
-                    <div className="text-sm text-zinc-300 flex items-center gap-2 rounded-full border border-white/[0.08] px-3 py-1.5">
+                    <div className="text-sm text-zinc-300 flex items-center gap-2 rounded-full border border-white/8 px-3 py-1.5">
                       <span>{dayMood.emoji}</span>
                       <span>{dayMood.label}</span>
                     </div>
@@ -186,6 +221,47 @@ export default function JournalDayPage() {
             </Card>
 
             <Card className="rounded-3xl">
+              <CardContent className="p-6 flex flex-col gap-4">
+                <div>
+                  <h2 className="font-bold text-zinc-100">AI tools</h2>
+                  <p className="text-sm text-zinc-600 mt-1">Use AI only when you want help with this day.</p>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    variant="outline"
+                    className="rounded-full border-white/8 text-zinc-300 hover:bg-white/5"
+                    disabled={runningAction !== null || !day?.entries.length}
+                    onClick={() => runAction('reflect')}
+                  >
+                    {runningAction === 'reflect' ? 'Reflecting...' : 'Reflect on this day'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="rounded-full border-white/8 text-zinc-300 hover:bg-white/5"
+                    disabled={runningAction !== null || !day?.entries.length}
+                    onClick={() => runAction('summarize')}
+                  >
+                    {runningAction === 'summarize' ? 'Summarizing...' : 'Summarize this day'}
+                  </Button>
+                </div>
+
+                {!day?.entries.length && (
+                  <p className="text-sm text-zinc-600">Save at least one entry before using AI tools.</p>
+                )}
+
+                {aiOutput && (
+                  <div className="rounded-2xl border border-teal-500/20 bg-teal-500/5 px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-wider text-teal-300/80 mb-2">
+                      {lastAction === 'summarize' ? 'Day summary' : 'Day reflection'}
+                    </p>
+                    <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{aiOutput}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-3xl">
               <CardContent className="p-6 flex flex-col gap-5">
                 <div className="flex items-center justify-between">
                   <h2 className="font-bold text-zinc-100">Entries</h2>
@@ -199,7 +275,7 @@ export default function JournalDayPage() {
                     {day.entries.map(item => {
                       const moodMeta = item.mood ? emotionConfig[item.mood as keyof typeof emotionConfig] : null
                       return (
-                        <div key={item.id} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 flex flex-col gap-3">
+                        <div key={item.id} className="rounded-2xl border border-white/8 bg-white/3 p-4 flex flex-col gap-3">
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <p className="text-xs text-zinc-600">
                               {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -212,18 +288,12 @@ export default function JournalDayPage() {
                             )}
                           </div>
                           <p className="text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap">{item.content}</p>
-                          {item.aiReflection && (
-                            <div className="rounded-2xl border border-teal-500/20 bg-teal-500/5 px-4 py-3">
-                              <p className="text-[10px] uppercase tracking-wider text-teal-300/80 mb-2">AI reflection</p>
-                              <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{item.aiReflection}</p>
-                            </div>
-                          )}
                         </div>
                       )
                     })}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-white/[0.08] p-10 text-center">
+                  <div className="rounded-2xl border border-dashed border-white/8 p-10 text-center">
                     <div className="text-4xl mb-3">🌙</div>
                     <p className="text-sm text-zinc-500">No entries for this day yet.</p>
                   </div>
@@ -237,36 +307,25 @@ export default function JournalDayPage() {
               <CardContent className="p-6 flex flex-col gap-3">
                 <h3 className="font-bold text-zinc-100">Day snapshot</h3>
                 <p className="text-sm text-zinc-600">
-                  This page uses only one day&apos;s journal history, which keeps reflections focused and token usage low.
+                  This page uses only one day&apos;s journal history, which keeps AI focused and token usage low.
                 </p>
 
                 <div className="grid grid-cols-2 gap-3 text-center">
-                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+                  <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
                     <p className="text-xl font-bold gradient-text">{day?.entries.length ?? 0}</p>
                     <p className="text-[10px] text-zinc-600 mt-1">entries</p>
                   </div>
-                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+                  <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
                     <p className="text-xl font-bold gradient-text">{dayMood?.emoji ?? '🫶'}</p>
                     <p className="text-[10px] text-zinc-600 mt-1">{dayMood?.label ?? 'No mood yet'}</p>
                   </div>
                 </div>
 
                 {day?.summary && (
-                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
-                    <p className="text-[10px] uppercase tracking-wider text-zinc-700 mb-2">Summary</p>
-                    <p className="text-sm text-zinc-400 leading-relaxed">{day.summary}</p>
+                  <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
+                    <p className="text-[10px] uppercase tracking-wider text-zinc-700 mb-2">Latest AI note</p>
+                    <p className="text-sm text-zinc-400 leading-relaxed whitespace-pre-wrap">{day.summary}</p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-3xl">
-              <CardContent className="p-6 flex flex-col gap-3">
-                <h3 className="font-bold text-zinc-100">Latest reflection</h3>
-                {latestReflection ? (
-                  <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{latestReflection}</p>
-                ) : (
-                  <p className="text-sm text-zinc-600">Save an entry to get a reflection for this day.</p>
                 )}
               </CardContent>
             </Card>

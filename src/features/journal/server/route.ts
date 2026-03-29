@@ -2,7 +2,7 @@ import Elysia, { t } from 'elysia'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { detectEmotion } from '@/lib/emotion'
-import { generateJournalReflection } from '@/lib/ai'
+import { generateJournalDaySummary, generateJournalReflection } from '@/lib/ai'
 
 function parseDateKey(value: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
@@ -34,8 +34,32 @@ function getDateKey(date: Date): string {
 function buildDaySummary(reflection: string, fallbackContent: string): string {
   const source = reflection.trim() || fallbackContent.trim()
   if (!source) return ''
+  return source
+}
 
-  return source.length > 180 ? `${source.slice(0, 177).trimEnd()}...` : source
+async function getSerializedJournalDay(userId: string, date: Date) {
+  const day = await prisma.journalDay.findUnique({
+    where: {
+      userId_date: {
+        userId,
+        date,
+      },
+    },
+    include: {
+      entries: {
+        orderBy: { createdAt: 'asc' },
+      },
+    },
+  })
+
+  return day ? {
+    id: day.id,
+    date: getDateKey(day.date),
+    mood: day.mood,
+    summary: day.summary,
+    entries: day.entries,
+    updatedAt: day.updatedAt,
+  } : null
 }
 
 export const journal = new Elysia({ prefix: '/journal' })
@@ -93,29 +117,10 @@ export const journal = new Elysia({ prefix: '/journal' })
       return { error: 'Invalid date. Use YYYY-MM-DD.' }
     }
 
-    const day = await prisma.journalDay.findUnique({
-      where: {
-        userId_date: {
-          userId: session.userId,
-          date,
-        },
-      },
-      include: {
-        entries: {
-          orderBy: { createdAt: 'asc' },
-        },
-      },
-    })
+    const day = await getSerializedJournalDay(session.userId, date)
 
     return {
-      day: day ? {
-        id: day.id,
-        date: getDateKey(day.date),
-        mood: day.mood,
-        summary: day.summary,
-        entries: day.entries,
-        updatedAt: day.updatedAt,
-      } : {
+      day: day ?? {
         id: null,
         date: ctx.params.date,
         mood: null,
@@ -157,7 +162,7 @@ export const journal = new Elysia({ prefix: '/journal' })
         },
       })
 
-      const entry = await prisma.journalEntry.create({
+      await prisma.journalEntry.create({
         data: {
           journalDayId: day.id,
           content: ctx.body.content,
@@ -165,66 +170,10 @@ export const journal = new Elysia({ prefix: '/journal' })
         },
       })
 
-      const entriesForReflection = await prisma.journalEntry.findMany({
-        where: { journalDayId: day.id },
-        orderBy: { createdAt: 'asc' },
-        select: {
-          id: true,
-          content: true,
-          mood: true,
-          aiReflection: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      })
-
-      let reflection: string | null = null
-      try {
-        reflection = await generateJournalReflection(
-          entriesForReflection.map(item => ({ content: item.content, mood: item.mood })),
-          {
-            dateLabel: ctx.body.date,
-            mood: entryMood ?? day.mood ?? undefined,
-            previousSummary: day.summary ?? undefined,
-          }
-        )
-      } catch (error) {
-        console.error('[Journal Reflection Error]', error)
-      }
-
-      if (reflection) {
-        await prisma.journalEntry.update({
-          where: { id: entry.id },
-          data: { aiReflection: reflection },
-        })
-
-        await prisma.journalDay.update({
-          where: { id: day.id },
-          data: {
-            summary: buildDaySummary(reflection, ctx.body.content),
-            mood: entryMood ?? day.mood ?? null,
-          },
-        })
-      }
-
-      const updatedDay = await prisma.journalDay.findUnique({
-        where: { id: day.id },
-        include: {
-          entries: {
-            orderBy: { createdAt: 'asc' },
-          },
-        },
-      })
+      const updatedDay = await getSerializedJournalDay(session.userId, date)
 
       return {
-        day: updatedDay ? {
-          id: updatedDay.id,
-          date: getDateKey(updatedDay.date),
-          mood: updatedDay.mood,
-          summary: updatedDay.summary,
-          entries: updatedDay.entries,
-          updatedAt: updatedDay.updatedAt,
-        } : null,
+        day: updatedDay,
       }
     },
     {
@@ -232,6 +181,76 @@ export const journal = new Elysia({ prefix: '/journal' })
         date: t.String(),
         content: t.String({ minLength: 1 }),
         mood: t.Optional(t.String()),
+      }),
+    }
+  )
+  .post(
+    '/:date/action',
+    async (ctx) => {
+      const session = await getSession(ctx.request)
+      if (!session) { ctx.set.status = 401; return { error: 'Not authenticated' } }
+
+      const date = parseDateKey(ctx.params.date)
+      if (!date) {
+        ctx.set.status = 400
+        return { error: 'Invalid date. Use YYYY-MM-DD.' }
+      }
+
+      const day = await prisma.journalDay.findUnique({
+        where: {
+          userId_date: {
+            userId: session.userId,
+            date,
+          },
+        },
+      })
+      if (!day) {
+        ctx.set.status = 404
+        return { error: 'No journal entries found for this day yet.' }
+      }
+
+      const entries = await prisma.journalEntry.findMany({
+        where: { journalDayId: day.id },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          content: true,
+          mood: true,
+        },
+      })
+      if (entries.length === 0) {
+        ctx.set.status = 404
+        return { error: 'No journal entries found for this day yet.' }
+      }
+
+      try {
+        const output = ctx.body.action === 'reflect'
+          ? await generateJournalReflection(entries, {
+              dateLabel: ctx.params.date,
+              mood: day.mood ?? undefined,
+              previousSummary: day.summary ?? undefined,
+            })
+          : await generateJournalDaySummary(entries, {
+              dateLabel: ctx.params.date,
+              mood: day.mood ?? undefined,
+            })
+
+        await prisma.journalDay.update({
+          where: { id: day.id },
+          data: {
+            summary: buildDaySummary(output, entries[entries.length - 1]?.content ?? ''),
+          },
+        })
+
+        return { action: ctx.body.action, output }
+      } catch (error) {
+        console.error('[Journal AI Action Error]', error)
+        ctx.set.status = 502
+        return { error: 'Journal AI is temporarily unavailable. Please try again.' }
+      }
+    },
+    {
+      body: t.Object({
+        action: t.Union([t.Literal('reflect'), t.Literal('summarize')]),
       }),
     }
   )
