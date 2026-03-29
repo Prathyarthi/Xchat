@@ -38,17 +38,32 @@ model Agent {
 }
 
 model Conversation {
-  id        String    @id @default(uuid())
-  userId    String
-  agentId   String
-  summary   String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  agent     Agent     @relation(fields: [agentId], references: [id])
-  user      User      @relation(fields: [userId], references: [id])
-  messages  Message[]
+  id                String             @id @default(uuid())
+  userId            String
+  agentId           String
+  summary           String?
+  agentAvailableAt  DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  agent             Agent              @relation(fields: [agentId], references: [id])
+  user              User               @relation(fields: [userId], references: [id])
+  messages          Message[]
+  scheduledMessages ScheduledMessage[]
 
   @@unique([userId, agentId])
+}
+
+model ScheduledMessage {
+  id             String       @id @default(uuid())
+  conversationId String
+  content        String       @default("")
+  scheduledFor   DateTime
+  deliveredAt    DateTime?
+  eventType      String
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  @@index([conversationId, deliveredAt])
 }
 
 model Message {

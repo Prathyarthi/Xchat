@@ -29,6 +29,7 @@ interface Conversation {
   id: string
   agent: Agent
   messages: Message[]
+  agentAvailableAt: string | null
 }
 
 function TypingIndicator({ agentAvatar }: { agentAvatar: string }) {
@@ -93,8 +94,12 @@ export default function ChatPage() {
     fetch(`/api/conversations/${conversationId}/messages`, { credentials: 'include' })
       .then(r => r.json())
       .then(data => {
-        if (data.conversation) { setConversation(data.conversation); setMessages(data.conversation.messages) }
-        else router.push('/explore')
+        if (data.conversation) {
+          setConversation({ ...data.conversation, agentAvailableAt: data.conversation.agentAvailableAt ?? null })
+          setMessages(data.conversation.messages)
+        } else {
+          router.push('/explore')
+        }
       })
       .finally(() => setLoading(false))
   }, [conversationId])
@@ -119,10 +124,13 @@ export default function ChatPage() {
       })
       const data = await res.json()
       if (res.ok) {
+        if (data.agentAvailableAt !== undefined) {
+          setConversation(prev => prev ? { ...prev, agentAvailableAt: data.agentAvailableAt } : prev)
+        }
         setMessages(prev => {
           const without = prev.filter(m => m.id !== optimistic.id)
           const humanMsg: Message = { ...optimistic, id: `human-${Date.now()}`, emotion: data.userEmotion || null }
-          return [...without, humanMsg, data.message]
+          return data.message ? [...without, humanMsg, data.message] : [...without, humanMsg]
         })
       }
     } catch {
@@ -155,6 +163,9 @@ export default function ChatPage() {
   try { personality = JSON.parse(agent.personality || '{}') } catch {}
   const agentAvatar = agent.avatar || '✨'
   const userAvatar = user?.avatar || (user?.name?.[0]?.toUpperCase() ?? '?')
+  const isAgentAway = conversation.agentAvailableAt
+    ? new Date(conversation.agentAvailableAt) > new Date()
+    : false
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col">
@@ -236,8 +247,10 @@ export default function ChatPage() {
             <div>
               <h3 className="font-bold text-zinc-100 text-sm">{agent.name}</h3>
               <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span className="text-xs text-emerald-400">Online</span>
+                {isAgentAway
+                  ? <><span className="w-1.5 h-1.5 rounded-full bg-amber-400" /><span className="text-xs text-amber-400">Away</span></>
+                  : <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span className="text-xs text-emerald-400">Online</span></>
+                }
               </div>
             </div>
           </div>

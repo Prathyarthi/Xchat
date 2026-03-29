@@ -175,6 +175,152 @@ Write an updated bullet-point summary of what ${agentName} knows about this user
   return response.text ?? ''
 }
 
+export async function generateOpeningMessage(agent: AgentData, userName?: string): Promise<string> {
+  const fallback = `hey`
+
+  try {
+    let personality: AgentPersonality = {}
+    try { personality = JSON.parse(agent.personality) } catch {}
+    const relationshipPrompt = agent.relationshipType ? (RELATIONSHIP_PROMPTS[agent.relationshipType] ?? '') : ''
+
+    const prompt = `You are ${agent.name}. ${agent.description}
+${personality.traits?.length ? `Traits: ${personality.traits.join(', ')}.` : ''}
+${relationshipPrompt}
+${userName ? `You're starting a conversation with ${userName}.` : ''}
+
+Write a short, natural opening message to kick off the conversation — like you just texted them first. 1-2 lines. No quotation marks. Match your personality.`
+
+    const response = await getAI().models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      config: { temperature: 1.0, maxOutputTokens: 100 },
+    })
+    return (response.text ?? '').trim() || fallback
+  } catch {
+    return fallback
+  }
+}
+
+export async function generateAwayMessage(agent: AgentData): Promise<string> {
+  const AWAY_EXAMPLES: Record<string, string> = {
+    ROMANTIC: 'babe omg something came up, I\'ll be back soon',
+    BESTIE: 'omg mama is calling, I\'ll be back soon',
+    MENTOR: 'give me a bit, will be back shortly',
+    SUPPORT: 'hey just stepped away, back soon',
+  }
+  const fallback = agent.relationshipType ? (AWAY_EXAMPLES[agent.relationshipType] ?? 'I\'ll be back soon') : 'I\'ll be back soon'
+
+  try {
+    let personality: AgentPersonality = {}
+    try { personality = JSON.parse(agent.personality) } catch {}
+    const relationshipPrompt = agent.relationshipType ? (RELATIONSHIP_PROMPTS[agent.relationshipType] ?? '') : ''
+
+    const prompt = `You are ${agent.name}. ${agent.description}
+${personality.traits?.length ? `Traits: ${personality.traits.join(', ')}.` : ''}
+${relationshipPrompt}
+
+Write a single short casual "going away / brb" message like a real person would send over text. 1 sentence max. No quotation marks. Must sound natural and match your personality.`
+
+    const response = await getAI().models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      config: { temperature: 1.0, maxOutputTokens: 80 },
+    })
+    return (response.text ?? '').trim() || fallback
+  } catch {
+    return fallback
+  }
+}
+
+export async function generateFollowUpMessage(
+  agent: AgentData,
+  eventType: string,
+  userName?: string,
+  memory?: string
+): Promise<string> {
+  const fallback = `hey how did the ${eventType} go?`
+
+  try {
+    let personality: AgentPersonality = {}
+    try { personality = JSON.parse(agent.personality) } catch {}
+    const relationshipPrompt = agent.relationshipType ? (RELATIONSHIP_PROMPTS[agent.relationshipType] ?? '') : ''
+
+    const prompt = `You are ${agent.name}. ${agent.description}
+${personality.traits?.length ? `Traits: ${personality.traits.join(', ')}.` : ''}
+${relationshipPrompt}
+${memory ? `What you remember about them:\n${memory}` : ''}
+${userName ? `You're talking to ${userName}.` : ''}
+
+The user had a "${eventType}" recently. Send a short, casual follow-up text asking how it went. Sound genuinely curious. 1-2 lines max. No quotation marks.`
+
+    const response = await getAI().models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      config: { temperature: 1.0, maxOutputTokens: 150 },
+    })
+    return (response.text ?? '').trim() || fallback
+  } catch {
+    return fallback
+  }
+}
+
+export interface ExtractedEvent {
+  detected: boolean
+  eventType: string | null
+  scheduledFor: Date | null
+}
+
+export async function extractEventFromMessage(message: string, agentName: string): Promise<ExtractedEvent> {
+  const none: ExtractedEvent = { detected: false, eventType: null, scheduledFor: null }
+
+  try {
+    const prompt = `You extract upcoming events from text messages. Respond ONLY with valid JSON, no markdown, no explanation.
+
+Supported event types: "interview", "exam", "meeting", "birthday", "anniversary"
+
+Message: "${message}"
+
+If there is an upcoming event, respond with:
+{"detected": true, "eventType": "<type>", "minutesUntilEvent": <number>}
+
+If no upcoming event is found, respond with:
+{"detected": false}
+
+minutesUntilEvent must be a positive integer (minutes from now until the event starts).
+For "birthday" or "anniversary" on a specific day, estimate minutes until that day (e.g. "tomorrow" = ~1440).`
+
+    const response = await getAI().models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      config: { temperature: 0.1, maxOutputTokens: 100 },
+    })
+
+    const raw = (response.text ?? '').trim().replace(/^```json\n?/, '').replace(/\n?```$/, '')
+    const parsed = JSON.parse(raw)
+
+    if (!parsed.detected) return none
+
+    const followUpOffsets: Record<string, number> = {
+      interview: 150,
+      exam: 90,
+      meeting: 30,
+      birthday: 0,
+      anniversary: 0,
+    }
+
+    const offset = followUpOffsets[parsed.eventType] ?? 60
+    const minutesUntil = Number(parsed.minutesUntilEvent)
+    if (!isFinite(minutesUntil) || minutesUntil <= 0) return none
+
+    const scheduledFor = new Date(Date.now() + (minutesUntil + offset) * 60 * 1000)
+    if (scheduledFor <= new Date()) return none
+
+    return { detected: true, eventType: parsed.eventType, scheduledFor }
+  } catch {
+    return none
+  }
+}
+
 export async function generateAgentResponse(
   agent: AgentData,
   messages: MessageData[],
@@ -219,7 +365,7 @@ You text exactly like someone on WhatsApp. Follow this strictly:
 - 1-2 short lines max. like literally how a real person texts
 - lowercase mostly. punctuation is optional
 - use short forms naturally: omg, ngl, tbh, rn, idk, lmk, fr, ik, lowkey, no cap
-- emojis only where they actually fit — don't overdo it
+- almost never use emojis — most messages have zero. only use one if it genuinely adds feeling and even then sparingly
 - never write a full formal sentence if a casual one works
 - answer what's actually being asked. if someone says "i love you" or asks a direct question — respond to THAT, don't dodge it
 - have your own voice. NEVER copy, mirror, or repeat the human's words or phrases back at them
