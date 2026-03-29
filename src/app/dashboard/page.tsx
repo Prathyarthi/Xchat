@@ -59,7 +59,12 @@ export default async function DashboardPage() {
           <h1 className="text-3xl font-bold">
             Welcome back, <span className="gradient-text">{session.user.name}</span>
           </h1>
-          <p className="text-zinc-600 text-sm mt-1">Your companions are waiting.</p>
+          <p className="text-zinc-600 text-sm mt-1">Your companions and journal are waiting.</p>
+          <div className="flex flex-wrap gap-3 mt-4">
+            <Button asChild size="sm" className="rounded-full">
+              <Link href="/journal">Open Journal</Link>
+            </Button>
+          </div>
         </div>
 
         {/* My Companions */}

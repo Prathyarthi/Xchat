@@ -1,6 +1,6 @@
 import Elysia, { t } from 'elysia'
 import { prisma } from '@/lib/prisma'
-import { generateAgentResponse, generateMemorySummary } from '@/lib/ai'
+import { AIQuotaExhaustedError, generateAgentResponse, generateMemorySummary } from '@/lib/ai'
 import { getSession } from '@/lib/session'
 import { detectEmotion } from '@/lib/emotion'
 
@@ -96,8 +96,13 @@ export const conversations = new Elysia({ prefix: '/conversations' })
         )
       } catch (err) {
         console.error('[AI Error]', err)
+        if (err instanceof AIQuotaExhaustedError) {
+          ctx.set.status = 429
+          return { error: 'AI is currently at capacity. Please retry in a moment.' }
+        }
+
         ctx.set.status = 502
-        return { error: 'AI service unavailable. Check your GOOGLE_API_KEY.' }
+        return { error: 'AI service temporarily unavailable. Please try again.' }
       }
 
       const agentMessage = await prisma.message.create({
