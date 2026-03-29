@@ -108,6 +108,12 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, sending])
 
+  const calcTypingDelay = (text: string): number => {
+    const thinkMs = 500 + Math.random() * 1000   // 0.5–1.5s to "read" the message
+    const typeMs = (text.length / 20) * 1000      // ~20 chars/sec typing speed
+    return Math.min(7000, Math.max(800, thinkMs + typeMs))
+  }
+
   const handleSend = async () => {
     const text = input.trim()
     if (!text || sending || !conversation) return
@@ -126,6 +132,10 @@ export default function ChatPage() {
       if (res.ok) {
         if (data.agentAvailableAt !== undefined) {
           setConversation(prev => prev ? { ...prev, agentAvailableAt: data.agentAvailableAt } : prev)
+        }
+        // Simulate human typing delay for normal (non-away) responses
+        if (!data.agentAway && data.message?.content) {
+          await new Promise(resolve => setTimeout(resolve, calcTypingDelay(data.message.content)))
         }
         setMessages(prev => {
           const without = prev.filter(m => m.id !== optimistic.id)

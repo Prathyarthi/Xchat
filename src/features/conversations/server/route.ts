@@ -5,10 +5,10 @@ import { getSession } from '@/lib/session'
 import { detectEmotion } from '@/lib/emotion'
 
 const GHOST_PROBABILITY: Record<string, number> = {
-  ROMANTIC: 0.20,
-  BESTIE: 0.15,
-  MENTOR: 0.05,
-  SUPPORT: 0.03,
+  ROMANTIC: 0.05,
+  BESTIE: 0.04,
+  MENTOR: 0.02,
+  SUPPORT: 0.01,
 }
 
 export const conversations = new Elysia({ prefix: '/conversations' })
@@ -227,7 +227,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
       // Ghost probability check
       const ghostProb = GHOST_PROBABILITY[conversation.agent.relationshipType] ?? 0
       if (Math.random() < ghostProb) {
-        const awayMinutes = Math.floor(Math.random() * (180 - 30 + 1)) + 30
+        const awayMinutes = Math.floor(Math.random() * (30 - 2 + 1)) + 2
         const awayUntil = new Date(Date.now() + awayMinutes * 60 * 1000)
 
         await prisma.conversation.update({
@@ -279,13 +279,28 @@ export const conversations = new Elysia({ prefix: '/conversations' })
         )
       } catch (err) {
         console.error('[AI Error]', err)
-        if (err instanceof AIQuotaExhaustedError) {
-          ctx.set.status = 429
-          return { error: 'AI is currently at capacity. Please retry in a moment.' }
+        // On any AI failure, ghost the agent for 5–10 mins and show a brb message
+        const errorAwayMinutes = Math.floor(Math.random() * 6) + 5
+        const errorAwayUntil = new Date(Date.now() + errorAwayMinutes * 60 * 1000)
+        await prisma.conversation.update({
+          where: { id: conversationId },
+          data: { agentAvailableAt: errorAwayUntil },
+        })
+        const errorBrb = await prisma.message.create({
+          data: {
+            conversationId,
+            senderType: 'AGENT',
+            senderId: conversation.agentId,
+            content: 'brb in a sec',
+            emotion: 'neutral',
+          },
+        })
+        return {
+          message: errorBrb,
+          userEmotion,
+          agentAway: true,
+          agentAvailableAt: errorAwayUntil.toISOString(),
         }
-
-        ctx.set.status = 502
-        return { error: 'AI service temporarily unavailable. Please try again.' }
       }
 
       const agentMessage = await prisma.message.create({
