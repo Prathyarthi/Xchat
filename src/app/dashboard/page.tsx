@@ -31,7 +31,7 @@ export default async function DashboardPage() {
 
   const userId = session.user.id as string
 
-  const [conversations, discoverAgents] = await Promise.all([
+  const [conversations, createdAgents] = await Promise.all([
     prisma.conversation.findMany({
       where: { userId },
       include: {
@@ -41,6 +41,7 @@ export default async function DashboardPage() {
       orderBy: { updatedAt: 'desc' },
     }),
     prisma.agent.findMany({
+      where: { creatorId: userId },
       orderBy: { createdAt: 'desc' },
       take: 6,
       include: { _count: { select: { conversations: true } } },
@@ -48,13 +49,11 @@ export default async function DashboardPage() {
   ])
 
   const connectedAgentIds = new Set(conversations.map(c => c.agentId))
-  const freshDiscover = discoverAgents.filter(a => !connectedAgentIds.has(a.id)).slice(0, 6)
+  const unchattedAgents = createdAgents.filter(a => !connectedAgentIds.has(a.id)).slice(0, 6)
 
   return (
     <div className="min-h-[calc(100vh-64px)] pb-16 px-4 pt-8">
       <div className="max-w-5xl mx-auto flex flex-col gap-12">
-
-        {/* Header */}
         <div>
           <h1 className="text-3xl font-bold">
             Welcome back, <span className="gradient-text">{session.user.name}</span>
@@ -82,7 +81,7 @@ export default async function DashboardPage() {
               <h3 className="font-bold text-zinc-200 text-lg mb-2">No companions yet</h3>
               <p className="text-zinc-600 text-sm mb-6">Start a conversation with someone amazing.</p>
               <Button asChild className="rounded-full">
-                <Link href="/explore">Find your first companion →</Link>
+                <Link href="/agents/create">Create your first companion →</Link>
               </Button>
             </div>
           ) : (
@@ -126,8 +125,7 @@ export default async function DashboardPage() {
           )}
         </section>
 
-        {/* Discover */}
-        {freshDiscover.length > 0 && (
+        {unchattedAgents.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold text-zinc-100">Discover</h2>
@@ -136,7 +134,7 @@ export default async function DashboardPage() {
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {freshDiscover.map(agent => {
+              {unchattedAgents.map(agent => {
                 const badge = (agent as any).relationshipType ? RELATIONSHIP_BADGES[(agent as any).relationshipType] : null
                 let personality: any = {}
                 try { personality = JSON.parse((agent as any).personality || '{}') } catch {}

@@ -3,16 +3,23 @@ import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 
 export const agents = new Elysia({ prefix: '/agents' })
-  .get('/', async () => {
+  .get('/', async (ctx) => {
+    const session = await getSession(ctx.request)
+    if (!session) { ctx.set.status = 401; return { error: 'Not authenticated' } }
+
     const agentList = await prisma.agent.findMany({
+      where: { creatorId: session.userId },
       orderBy: { createdAt: 'desc' },
       include: { _count: { select: { conversations: true } } },
     })
     return { agents: agentList }
   })
   .get('/:id', async (ctx) => {
-    const agent = await prisma.agent.findUnique({
-      where: { id: ctx.params.id },
+    const session = await getSession(ctx.request)
+    if (!session) { ctx.set.status = 401; return { error: 'Not authenticated' } }
+
+    const agent = await prisma.agent.findFirst({
+      where: { id: ctx.params.id, creatorId: session.userId },
       include: { _count: { select: { conversations: true } } },
     })
     if (!agent) {

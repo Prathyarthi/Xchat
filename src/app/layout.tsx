@@ -11,7 +11,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'XChat — AI Companions',
+  title: 'Closr — AI Companions',
   description: 'Find your perfect AI companion. Meaningful conversations, emotional intelligence, and genuine connection.',
 }
 

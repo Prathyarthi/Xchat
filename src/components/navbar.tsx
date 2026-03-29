@@ -24,7 +24,7 @@ export function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/[0.06]">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <span className="text-xl font-bold gradient-text tracking-wider">XCHAT</span>
+          <span className="text-xl font-bold gradient-text tracking-wider">Closr</span>
           <span className="text-xs px-2 py-0.5 rounded-full bg-white/[0.05] text-zinc-400 border border-white/[0.08]">
             AI
           </span>

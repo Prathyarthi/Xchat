@@ -39,8 +39,8 @@ export default function SignUpPage() {
       <div className="w-full max-w-sm animate-fade-up">
         <Card className="rounded-2xl px-2">
           <CardHeader className="text-center pb-0">
-            <Link href="/" className="gradient-text font-bold text-2xl tracking-wider">XCHAT</Link>
-            <h1 className="text-xl font-bold text-zinc-100 mt-3 mb-1">Join XChat</h1>
+            <Link href="/" className="gradient-text font-bold text-2xl tracking-wider">Closr</Link>
+            <h1 className="text-xl font-bold text-zinc-100 mt-3 mb-1">Join Closr</h1>
             <p className="text-zinc-600 text-sm">Create your account and find your companion</p>
           </CardHeader>
           <CardContent>

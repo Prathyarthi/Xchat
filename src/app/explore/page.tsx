@@ -22,14 +22,14 @@ interface Agent {
 
 const RELATIONSHIP_BADGES: Record<string, { label: string; className: string }> = {
   ROMANTIC: { label: '💕 Romantic', className: 'border-pink-500/40 text-pink-400 bg-pink-500/10' },
-  BESTIE:   { label: '🤝 Bestie',   className: 'border-blue-500/40 text-blue-400 bg-blue-500/10' },
-  MENTOR:   { label: '🧠 Mentor',   className: 'border-amber-500/40 text-amber-400 bg-amber-500/10' },
-  SUPPORT:  { label: '🫂 Support',  className: 'border-teal-500/40 text-teal-400 bg-teal-500/10' },
+  BESTIE: { label: '🤝 Bestie', className: 'border-blue-500/40 text-blue-400 bg-blue-500/10' },
+  MENTOR: { label: '🧠 Mentor', className: 'border-amber-500/40 text-amber-400 bg-amber-500/10' },
+  SUPPORT: { label: '🫂 Support', className: 'border-teal-500/40 text-teal-400 bg-teal-500/10' },
 }
 
 function AgentCard({ agent }: { agent: Agent }) {
   let personality: any = {}
-  try { personality = JSON.parse(agent.personality || '{}') } catch {}
+  try { personality = JSON.parse(agent.personality || '{}') } catch { }
 
   const badge = agent.relationshipType ? RELATIONSHIP_BADGES[agent.relationshipType] : null
 
@@ -47,9 +47,6 @@ function AgentCard({ agent }: { agent: Agent }) {
                 {badge.label}
               </span>
             )}
-            <p className="text-xs text-zinc-700 mt-0.5">
-              {agent._count.conversations} {agent._count.conversations === 1 ? 'connection' : 'connections'}
-            </p>
           </div>
         </div>
 
@@ -86,18 +83,26 @@ function AgentCard({ agent }: { agent: Agent }) {
 }
 
 export default function ExplorePage() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [agents, setAgents] = useState<Agent[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
   useEffect(() => {
+    if (authLoading || !user) return
+
     fetch('/api/agents', { credentials: 'include' })
       .then(r => r.json())
       .then(data => setAgents(data.agents || []))
       .finally(() => setLoading(false))
-  }, [])
+  }, [authLoading, user])
+
+  useEffect(() => {
+    if (!authLoading && user === null) {
+      router.push('/sign-in')
+    }
+  }, [authLoading, router, user])
 
   const filtered = agents.filter(a =>
     a.name.toLowerCase().includes(search.toLowerCase()) ||

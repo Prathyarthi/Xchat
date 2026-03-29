@@ -29,7 +29,7 @@ export default function SignInPage() {
       <div className="w-full max-w-sm animate-fade-up">
         <Card className="rounded-2xl px-2">
           <CardHeader className="text-center pb-0">
-            <Link href="/" className="gradient-text font-bold text-2xl tracking-wider">XCHAT</Link>
+            <Link href="/" className="gradient-text font-bold text-2xl tracking-wider">Closr</Link>
             <h1 className="text-xl font-bold text-zinc-100 mt-3 mb-1">Welcome back</h1>
             <p className="text-zinc-600 text-sm">Sign in to reconnect with your companions</p>
           </CardHeader>
@@ -58,7 +58,7 @@ export default function SignInPage() {
             </form>
 
             <p className="text-center text-sm text-zinc-600 mt-6">
-              New to XChat?{' '}
+              New to Closr?{' '}
               <Link href="/sign-up" className="text-zinc-300 hover:text-zinc-100">
                 Create an account
               </Link>

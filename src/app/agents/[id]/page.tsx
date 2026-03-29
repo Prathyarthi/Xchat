@@ -1,5 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
+import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
+import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import ConnectButton from './connect-button'
@@ -13,10 +15,11 @@ const RELATIONSHIP_BADGES: Record<string, { label: string; className: string }> 
 
 export default async function AgentProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const session = await getServerSession(authOptions)
+  if (!session?.user) redirect('/sign-in')
 
-  const agent = await prisma.agent.findUnique({
-    where: { id },
-    include: { _count: { select: { conversations: true } } },
+  const agent = await prisma.agent.findFirst({
+    where: { id, creatorId: session.user.id as string },
   })
 
   if (!agent) notFound()
@@ -37,7 +40,7 @@ export default async function AgentProfilePage({ params }: { params: Promise<{ i
 
         {/* Hero */}
         <div className="flex flex-col items-center text-center gap-4">
-          <div className="w-28 h-28 rounded-3xl flex items-center justify-center text-6xl bg-zinc-800/60 border border-white/[0.08] shadow-xl">
+          <div className="w-28 h-28 rounded-3xl flex items-center justify-center text-6xl bg-zinc-800/60 border border-white/8 shadow-xl">
             {agent.avatar || '✨'}
           </div>
           <div>
@@ -47,9 +50,6 @@ export default async function AgentProfilePage({ params }: { params: Promise<{ i
                 {badge.label}
               </span>
             )}
-            <p className="text-zinc-600 text-sm mt-2">
-              {agent._count.conversations} {agent._count.conversations === 1 ? 'person connected' : 'people connected'}
-            </p>
           </div>
         </div>
 

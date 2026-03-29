@@ -12,7 +12,9 @@ export const conversations = new Elysia({ prefix: '/conversations' })
       if (!session) { ctx.set.status = 401; return { error: 'Not authenticated' } }
 
       const { agentId } = ctx.body
-      const agent = await prisma.agent.findUnique({ where: { id: agentId } })
+      const agent = await prisma.agent.findFirst({
+        where: { id: agentId, creatorId: session.userId },
+      })
       if (!agent) { ctx.set.status = 404; return { error: 'Agent not found' } }
 
       let conversation = await prisma.conversation.findFirst({
@@ -41,7 +43,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
       },
     })
 
-    if (!conversation || conversation.userId !== session.userId) {
+    if (!conversation || conversation.userId !== session.userId || conversation.agent.creatorId !== session.userId) {
       ctx.set.status = 404
       return { error: 'Conversation not found' }
     }
@@ -61,7 +63,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
         include: { agent: true },
       })
 
-      if (!conversation || conversation.userId !== session.userId) {
+      if (!conversation || conversation.userId !== session.userId || conversation.agent.creatorId !== session.userId) {
         ctx.set.status = 404
         return { error: 'Conversation not found' }
       }
