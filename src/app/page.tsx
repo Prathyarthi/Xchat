@@ -197,7 +197,7 @@ export default async function LandingPage() {
                     ))}
                   </div>
 
-                  <Button asChild variant={plan.highlight ? 'default' : 'outline'} className="rounded-full mt-auto border-white/8 text-zinc-300 hover:bg-white/5">
+                  <Button asChild variant={plan.highlight ? 'default' : 'outline'} className="rounded-full mt-auto border-white/8 text-zinc-500 hover:bg-white/5">
                     <TrackedLink href={plan.ctaHref} eventName="pricing_cta_clicked" eventProperties={{ plan: plan.slug, source: 'homepage_pricing' }}>
                       {plan.ctaLabel}
                     </TrackedLink>

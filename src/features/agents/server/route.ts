@@ -2,6 +2,7 @@ import Elysia, { t } from 'elysia'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { trackEvent } from '@/features/analytics/lib/server'
+import { getFreeCompanionUsage } from '@/features/pricing/lib/limits'
 
 export const agents = new Elysia({ prefix: '/agents' })
   .get('/', async (ctx) => {
@@ -36,6 +37,17 @@ export const agents = new Elysia({ prefix: '/agents' })
       if (!session) { ctx.set.status = 401; return { error: 'Not authenticated' } }
 
       const { name, description, personality, interests, avatar, relationshipType } = ctx.body
+      const companionUsage = await getFreeCompanionUsage(session.userId)
+
+      if (companionUsage.used >= companionUsage.limit) {
+        ctx.set.status = 403
+        return {
+          code: 'FREE_COMPANION_LIMIT_REACHED',
+          error: 'Free plan includes 1 companion. Upgrade to create more.',
+          companionUsage,
+          upgradeUrl: '/pricing',
+        }
+      }
 
       const agent = await prisma.agent.create({
         data: {

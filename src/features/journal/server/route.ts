@@ -4,6 +4,7 @@ import { getSession } from '@/lib/session'
 import { detectEmotion } from '@/lib/emotion'
 import { generateJournalDaySummary, generateJournalReflection } from '@/lib/ai'
 import { trackEvent } from '@/features/analytics/lib/server'
+import { getFreeJournalUsage } from '@/features/pricing/lib/limits'
 
 function parseDateKey(value: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
@@ -76,19 +77,22 @@ export const journal = new Elysia({ prefix: '/journal' })
         return { error: 'Invalid month. Use YYYY-MM.' }
       }
 
-      const days = await prisma.journalDay.findMany({
-        where: {
-          userId: session.userId,
-          date: {
-            gte: parsed.start,
-            lt: parsed.end,
+      const [days, journalUsage] = await Promise.all([
+        prisma.journalDay.findMany({
+          where: {
+            userId: session.userId,
+            date: {
+              gte: parsed.start,
+              lt: parsed.end,
+            },
           },
-        },
-        orderBy: { date: 'asc' },
-        include: {
-          _count: { select: { entries: true } },
-        },
-      })
+          orderBy: { date: 'asc' },
+          include: {
+            _count: { select: { entries: true } },
+          },
+        }),
+        getFreeJournalUsage(session.userId),
+      ])
 
       return {
         month: parsed.monthKey,
@@ -100,6 +104,7 @@ export const journal = new Elysia({ prefix: '/journal' })
           entryCount: day._count.entries,
           updatedAt: day.updatedAt,
         })),
+        journalUsage,
       }
     },
     {
@@ -118,7 +123,10 @@ export const journal = new Elysia({ prefix: '/journal' })
       return { error: 'Invalid date. Use YYYY-MM-DD.' }
     }
 
-    const day = await getSerializedJournalDay(session.userId, date)
+    const [day, journalUsage] = await Promise.all([
+      getSerializedJournalDay(session.userId, date),
+      getFreeJournalUsage(session.userId),
+    ])
 
     return {
       day: day ?? {
@@ -129,6 +137,7 @@ export const journal = new Elysia({ prefix: '/journal' })
         entries: [],
         updatedAt: null,
       },
+      journalUsage,
     }
   })
   .post(
@@ -141,6 +150,17 @@ export const journal = new Elysia({ prefix: '/journal' })
       if (!date) {
         ctx.set.status = 400
         return { error: 'Invalid date. Use YYYY-MM-DD.' }
+      }
+
+      const journalUsage = await getFreeJournalUsage(session.userId)
+      if (journalUsage.remaining <= 0) {
+        ctx.set.status = 403
+        return {
+          code: 'FREE_JOURNAL_LIMIT_REACHED',
+          error: 'You have reached the free journal limit for this month. Upgrade to keep writing.',
+          journalUsage,
+          upgradeUrl: '/pricing',
+        }
       }
 
       const detectedMood = detectEmotion(ctx.body.content)
@@ -189,6 +209,11 @@ export const journal = new Elysia({ prefix: '/journal' })
 
       return {
         day: updatedDay,
+        journalUsage: {
+          ...journalUsage,
+          used: journalUsage.used + 1,
+          remaining: Math.max(0, journalUsage.remaining - 1),
+        },
       }
     },
     {

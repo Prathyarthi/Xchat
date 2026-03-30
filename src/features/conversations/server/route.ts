@@ -4,6 +4,7 @@ import { AIQuotaExhaustedError, generateAgentResponse, generateMemorySummary, ge
 import { getSession } from '@/lib/session'
 import { detectEmotion } from '@/lib/emotion'
 import { trackEvent } from '@/features/analytics/lib/server'
+import { getFreeMessageUsage, FREE_PLAN_LIMITS } from '@/features/pricing/lib/limits'
 
 const GHOST_PROBABILITY: Record<string, number> = {
   ROMANTIC: 0.05,
@@ -68,6 +69,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
     }
 
     const now = new Date()
+    const messageUsage = await getFreeMessageUsage(session.userId)
 
     // Agent sends first message if conversation is empty
     if (conversation.messages.length === 0) {
@@ -166,6 +168,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
         ...fresh,
         agentAvailableAt: fresh?.agentAvailableAt?.toISOString() ?? null,
       },
+      messageUsage,
     }
   })
   .post(
@@ -186,6 +189,17 @@ export const conversations = new Elysia({ prefix: '/conversations' })
         return { error: 'Conversation not found' }
       }
 
+      const messageUsage = await getFreeMessageUsage(session.userId)
+      if (messageUsage.used >= FREE_PLAN_LIMITS.monthlyMessages) {
+        ctx.set.status = 403
+        return {
+          code: 'FREE_MESSAGE_LIMIT_REACHED',
+          error: 'You have used all 50 free messages for this month. Upgrade to continue chatting.',
+          messageUsage,
+          upgradeUrl: '/pricing',
+        }
+      }
+
       const userEmotion = detectEmotion(message)
 
       // Save human message always
@@ -199,12 +213,12 @@ export const conversations = new Elysia({ prefix: '/conversations' })
         },
       })
 
-      const previousHumanCount = await prisma.message.count({
+      const conversationHumanCount = await prisma.message.count({
         where: { conversationId, senderType: 'HUMAN' },
       })
 
       await trackEvent({
-        name: previousHumanCount === 1 ? 'first_message_sent' : 'message_sent',
+        name: conversationHumanCount === 1 ? 'first_message_sent' : 'message_sent',
         userId: session.userId,
         path: `/chat/${conversationId}`,
         properties: {
@@ -226,6 +240,11 @@ export const conversations = new Elysia({ prefix: '/conversations' })
             userEmotion,
             agentAway: true,
             agentAvailableAt: agentAvailableAt.toISOString(),
+          messageUsage: {
+            ...messageUsage,
+              used: messageUsage.used + 1,
+              remaining: Math.max(0, FREE_PLAN_LIMITS.monthlyMessages - (messageUsage.used + 1)),
+          },
           }
         }
 
@@ -247,6 +266,11 @@ export const conversations = new Elysia({ prefix: '/conversations' })
           userEmotion,
           agentAway: true,
           agentAvailableAt: agentAvailableAt.toISOString(),
+          messageUsage: {
+            ...messageUsage,
+            used: messageUsage.used + 1,
+            remaining: Math.max(0, FREE_PLAN_LIMITS.monthlyMessages - (messageUsage.used + 1)),
+          },
         }
       }
 
@@ -283,6 +307,11 @@ export const conversations = new Elysia({ prefix: '/conversations' })
           userEmotion,
           agentAway: true,
           agentAvailableAt: awayUntil.toISOString(),
+          messageUsage: {
+            ...messageUsage,
+            used: messageUsage.used + 1,
+            remaining: Math.max(0, FREE_PLAN_LIMITS.monthlyMessages - (messageUsage.used + 1)),
+          },
         }
       }
 
@@ -326,6 +355,11 @@ export const conversations = new Elysia({ prefix: '/conversations' })
           userEmotion,
           agentAway: true,
           agentAvailableAt: errorAwayUntil.toISOString(),
+          messageUsage: {
+            ...messageUsage,
+            used: messageUsage.used + 1,
+            remaining: Math.max(0, FREE_PLAN_LIMITS.monthlyMessages - (messageUsage.used + 1)),
+          },
         }
       }
 
@@ -339,7 +373,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
         },
       })
 
-      const humanCount = previousHumanCount
+      const humanCount = conversationHumanCount
 
       if (humanCount % 10 === 0) {
         generateMemorySummary(
@@ -377,6 +411,11 @@ export const conversations = new Elysia({ prefix: '/conversations' })
         userEmotion,
         agentAway: false,
         agentAvailableAt: null,
+        messageUsage: {
+          ...messageUsage,
+          used: messageUsage.used + 1,
+          remaining: Math.max(0, FREE_PLAN_LIMITS.monthlyMessages - (messageUsage.used + 1)),
+        },
       }
     },
     {
