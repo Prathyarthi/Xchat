@@ -118,7 +118,7 @@ export default function ExplorePage() {
             Find Your <span className="gradient-text">Companion</span>
           </h1>
           <p className="text-zinc-600 max-w-lg mx-auto text-sm">
-            Browse AI companions with unique personalities. Each one built to connect with you.
+            Browse companions built for continuity: distinct personalities, emotional tone, and conversations that can grow over time.
           </p>
         </div>
 

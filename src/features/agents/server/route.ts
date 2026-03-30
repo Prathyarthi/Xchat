@@ -1,6 +1,7 @@
 import Elysia, { t } from 'elysia'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { trackEvent } from '@/features/analytics/lib/server'
 
 export const agents = new Elysia({ prefix: '/agents' })
   .get('/', async (ctx) => {
@@ -45,6 +46,16 @@ export const agents = new Elysia({ prefix: '/agents' })
           avatar: avatar ?? null,
           relationshipType: (relationshipType as any) ?? 'BESTIE',
           creatorId: session.userId,
+        },
+      })
+
+      await trackEvent({
+        name: 'companion_created',
+        userId: session.userId,
+        path: '/agents/create',
+        properties: {
+          relationshipType: agent.relationshipType,
+          hasInterests: agent.interests.length > 0,
         },
       })
 

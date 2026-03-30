@@ -24,7 +24,7 @@ export function useRegister() {
       await signIn('credentials', {
         email: data.email,
         password: data.password,
-        callbackUrl: '/explore',
+        callbackUrl: '/welcome',
       })
       return json
     },

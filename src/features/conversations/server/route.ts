@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { AIQuotaExhaustedError, generateAgentResponse, generateMemorySummary, generateAwayMessage, generateFollowUpMessage, extractEventFromMessage, generateOpeningMessage } from '@/lib/ai'
 import { getSession } from '@/lib/session'
 import { detectEmotion } from '@/lib/emotion'
+import { trackEvent } from '@/features/analytics/lib/server'
 
 const GHOST_PROBABILITY: Record<string, number> = {
   ROMANTIC: 0.05,
@@ -31,6 +32,16 @@ export const conversations = new Elysia({ prefix: '/conversations' })
       if (!conversation) {
         conversation = await prisma.conversation.create({
           data: { userId: session.userId, agentId },
+        })
+
+        await trackEvent({
+          name: 'conversation_started',
+          userId: session.userId,
+          path: `/agents/${agentId}`,
+          properties: {
+            agentId,
+            relationshipType: agent.relationshipType,
+          },
         })
       }
 
@@ -188,6 +199,21 @@ export const conversations = new Elysia({ prefix: '/conversations' })
         },
       })
 
+      const previousHumanCount = await prisma.message.count({
+        where: { conversationId, senderType: 'HUMAN' },
+      })
+
+      await trackEvent({
+        name: previousHumanCount === 1 ? 'first_message_sent' : 'message_sent',
+        userId: session.userId,
+        path: `/chat/${conversationId}`,
+        properties: {
+          conversationId,
+          relationshipType: conversation.agent.relationshipType,
+          emotion: userEmotion,
+        },
+      })
+
       const now = new Date()
       const agentAvailableAt = (conversation as any).agentAvailableAt as Date | null
 
@@ -313,9 +339,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
         },
       })
 
-      const humanCount = await prisma.message.count({
-        where: { conversationId, senderType: 'HUMAN' },
-      })
+      const humanCount = previousHumanCount
 
       if (humanCount % 10 === 0) {
         generateMemorySummary(

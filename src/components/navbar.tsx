@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from '@/features/auth/components/auth-provider'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { TrackedLink } from '@/components/analytics/tracked-link'
 
 export function Navbar() {
   const { user, logout, loading } = useAuth()
@@ -12,6 +13,7 @@ export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const navLinks = [
+    { href: '/pricing', label: 'Pricing' },
     { href: '/explore', label: 'Explore' },
     { href: '/agents/create', label: 'Create Agent' },
     ...(user ? [
@@ -21,11 +23,11 @@ export function Navbar() {
   ]
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/[0.06]">
+    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/6">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <span className="text-xl font-bold gradient-text tracking-wider">Closr</span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-white/[0.05] text-zinc-400 border border-white/[0.08]">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-zinc-400 border border-white/8">
             AI
           </span>
         </Link>
@@ -52,22 +54,22 @@ export function Navbar() {
           ) : user ? (
             <>
               <Link href="/profile" className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200">
-                <span className="w-8 h-8 rounded-full bg-zinc-800 border border-white/[0.08] flex items-center justify-center text-sm font-bold">
+                <span className="w-8 h-8 rounded-full bg-zinc-800 border border-white/8 flex items-center justify-center text-sm font-bold">
                   {user.avatar || user.name[0].toUpperCase()}
                 </span>
                 <span className="max-w-[120px] truncate">{user.name}</span>
               </Link>
-              <Button variant="outline" size="sm" onClick={logout} className="border-white/[0.08] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] rounded-full">
+              <Button variant="outline" size="sm" onClick={logout} className="border-white/8 text-zinc-400 hover:text-zinc-200 hover:bg-white/5 rounded-full">
                 Sign out
               </Button>
             </>
           ) : (
             <>
-              <Button variant="ghost" size="sm" asChild className="text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] rounded-full">
-                <Link href="/sign-in">Sign in</Link>
+              <Button variant="ghost" size="sm" asChild className="text-zinc-400 hover:text-zinc-200 hover:bg-white/5 rounded-full">
+                <TrackedLink href="/sign-in" eventName="sign_in_cta_clicked">Sign in</TrackedLink>
               </Button>
               <Button size="sm" asChild className="rounded-full">
-                <Link href="/sign-up">Get Started</Link>
+                <TrackedLink href="/sign-up" eventName="sign_up_cta_clicked">Get Started</TrackedLink>
               </Button>
             </>
           )}
@@ -87,7 +89,7 @@ export function Navbar() {
       </div>
 
       {menuOpen && (
-        <div className="md:hidden glass border-t border-white/[0.06] px-4 py-4 flex flex-col gap-3">
+        <div className="md:hidden glass border-t border-white/6 px-4 py-4 flex flex-col gap-3">
           {navLinks.map(link => (
             <Link
               key={link.href}
@@ -103,7 +105,7 @@ export function Navbar() {
               <Link href="/profile" className="text-sm text-zinc-400 py-2" onClick={() => setMenuOpen(false)}>
                 Profile
               </Link>
-              <Button variant="outline" size="sm" onClick={logout} className="border-white/[0.08] text-zinc-400 w-full rounded-full">
+              <Button variant="outline" size="sm" onClick={logout} className="border-white/8 text-zinc-400 w-full rounded-full">
                 Sign out
               </Button>
             </>
@@ -113,7 +115,7 @@ export function Navbar() {
                 Sign in
               </Link>
               <Button size="sm" asChild className="w-full rounded-full" onClick={() => setMenuOpen(false)}>
-                <Link href="/sign-up">Get Started</Link>
+                <TrackedLink href="/sign-up" eventName="sign_up_cta_clicked">Get Started</TrackedLink>
               </Button>
             </>
           )}

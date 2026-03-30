@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { detectEmotion } from '@/lib/emotion'
 import { generateJournalDaySummary, generateJournalReflection } from '@/lib/ai'
+import { trackEvent } from '@/features/analytics/lib/server'
 
 function parseDateKey(value: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
@@ -170,6 +171,20 @@ export const journal = new Elysia({ prefix: '/journal' })
         },
       })
 
+      const entryCount = await prisma.journalEntry.count({
+        where: { journalDayId: day.id },
+      })
+
+      await trackEvent({
+        name: entryCount === 1 ? 'first_journal_entry_created' : 'journal_entry_created',
+        userId: session.userId,
+        path: `/journal/${ctx.body.date}`,
+        properties: {
+          date: ctx.body.date,
+          mood: entryMood ?? null,
+        },
+      })
+
       const updatedDay = await getSerializedJournalDay(session.userId, date)
 
       return {
@@ -223,6 +238,16 @@ export const journal = new Elysia({ prefix: '/journal' })
       }
 
       try {
+        await trackEvent({
+          name: ctx.body.action === 'reflect' ? 'journal_reflection_requested' : 'journal_summary_requested',
+          userId: session.userId,
+          path: `/journal/${ctx.params.date}`,
+          properties: {
+            date: ctx.params.date,
+            entryCount: entries.length,
+          },
+        })
+
         const output = ctx.body.action === 'reflect'
           ? await generateJournalReflection(entries, {
               dateLabel: ctx.params.date,
@@ -238,6 +263,16 @@ export const journal = new Elysia({ prefix: '/journal' })
           where: { id: day.id },
           data: {
             summary: buildDaySummary(output, entries[entries.length - 1]?.content ?? ''),
+          },
+        })
+
+        await trackEvent({
+          name: ctx.body.action === 'reflect' ? 'journal_reflection_completed' : 'journal_summary_completed',
+          userId: session.userId,
+          path: `/journal/${ctx.params.date}`,
+          properties: {
+            date: ctx.params.date,
+            entryCount: entries.length,
           },
         })
 

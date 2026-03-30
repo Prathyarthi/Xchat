@@ -99,7 +99,7 @@ export default function CreateAgentPage() {
           <h1 className="text-3xl font-bold mb-2">
             Create a <span className="gradient-text">Companion</span>
           </h1>
-          <p className="text-zinc-600 text-sm">Shape a unique AI personality that will form real connections.</p>
+          <p className="text-zinc-600 text-sm">Shape a companion people can return to for memory, reflection, and a distinct relationship vibe.</p>
         </div>
 
         {/* Step indicator */}
@@ -108,12 +108,12 @@ export default function CreateAgentPage() {
             <div key={s} className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
                 step === s ? 'bg-zinc-200 text-zinc-900'
-                : step > s ? 'bg-white/[0.08] text-zinc-400'
-                : 'bg-white/[0.03] border border-white/[0.08] text-zinc-600'
+                : step > s ? 'bg-white/8 text-zinc-400'
+                : 'bg-white/3 border border-white/8 text-zinc-600'
               }`}>
                 {step > s ? '✓' : s}
               </div>
-              {s < 4 && <div className={`w-12 h-px ${step > s ? 'bg-white/20' : 'bg-white/[0.06]'}`} />}
+              {s < 4 && <div className={`w-12 h-px ${step > s ? 'bg-white/20' : 'bg-white/6'}`} />}
             </div>
           ))}
         </div>
@@ -160,7 +160,7 @@ export default function CreateAgentPage() {
                   <div className="grid grid-cols-8 gap-2">
                     {AVATARS.map(emoji => (
                       <button key={emoji} type="button" onClick={() => setForm(f => ({ ...f, avatar: emoji }))}
-                        className={`h-10 rounded-xl text-xl ${form.avatar === emoji ? 'bg-white/[0.1] border border-white/25' : 'bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.07]'}`}>
+                        className={`h-10 rounded-xl text-xl ${form.avatar === emoji ? 'bg-white/10 border border-white/25' : 'bg-white/3 border border-white/6 hover:bg-white/[0.07]'}`}>
                         {emoji}
                       </button>
                     ))}
@@ -178,7 +178,7 @@ export default function CreateAgentPage() {
                 </div>
                 {error && <p className="text-red-400 text-sm">{error}</p>}
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1 border-white/[0.08] text-zinc-400 hover:bg-white/[0.05] rounded-xl">← Back</Button>
+                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1 border-white/8 text-zinc-400 hover:bg-white/5 rounded-xl">← Back</Button>
                   <Button onClick={() => {
                     if (!form.name.trim() || form.name.length < 2) { setError('Name must be at least 2 characters'); return }
                     if (!form.description.trim() || form.description.length < 10) { setError('Description must be at least 10 characters'); return }
@@ -227,7 +227,7 @@ export default function CreateAgentPage() {
                     onChange={e => setForm(f => ({ ...f, backstory: e.target.value }))} className="min-h-[80px] resize-none" />
                 </div>
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setStep(2)} className="flex-1 border-white/[0.08] text-zinc-400 hover:bg-white/[0.05] rounded-xl">← Back</Button>
+                  <Button variant="outline" onClick={() => setStep(2)} className="flex-1 border-white/8 text-zinc-400 hover:bg-white/5 rounded-xl">← Back</Button>
                   <Button onClick={() => setStep(4)} className="flex-1 rounded-xl">Next: Interests →</Button>
                 </div>
               </div>
@@ -252,7 +252,7 @@ export default function CreateAgentPage() {
                 <div className="glass rounded-2xl p-4">
                   <p className="text-[10px] text-zinc-700 uppercase tracking-wider mb-3">Preview</p>
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl bg-zinc-800/60 border border-white/[0.08]">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl bg-zinc-800/60 border border-white/8">
                       {form.avatar}
                     </div>
                     <div>
@@ -266,7 +266,7 @@ export default function CreateAgentPage() {
                   {form.interests.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-3">
                       {form.interests.map(i => (
-                        <Badge key={i} variant="outline" className="border-white/[0.1] text-zinc-400 bg-white/[0.04] text-xs rounded-full">{i}</Badge>
+                        <Badge key={i} variant="outline" className="border-white/10 text-zinc-400 bg-white/4 text-xs rounded-full">{i}</Badge>
                       ))}
                     </div>
                   )}
@@ -274,7 +274,7 @@ export default function CreateAgentPage() {
 
                 {error && <p className="text-red-400 text-sm">{error}</p>}
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1 border-white/[0.08] text-zinc-400 hover:bg-white/[0.05] rounded-xl">← Back</Button>
+                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1 border-white/8 text-zinc-400 hover:bg-white/5 rounded-xl">← Back</Button>
                   <Button onClick={handleSubmit} disabled={loading} className="flex-1 rounded-xl">
                     {loading ? 'Creating...' : '✨ Bring to Life'}
                   </Button>

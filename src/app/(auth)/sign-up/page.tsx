@@ -27,7 +27,7 @@ export default function SignUpPage() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Something went wrong'); setLoading(false); return }
-      await signIn('credentials', { email: form.email, password: form.password, callbackUrl: '/explore' })
+      await signIn('credentials', { email: form.email, password: form.password, callbackUrl: '/welcome' })
     } catch {
       setError('Failed to connect. Please try again.')
       setLoading(false)
@@ -41,7 +41,7 @@ export default function SignUpPage() {
           <CardHeader className="text-center pb-0">
             <Link href="/" className="gradient-text font-bold text-2xl tracking-wider">Closr</Link>
             <h1 className="text-xl font-bold text-zinc-100 mt-3 mb-1">Join Closr</h1>
-            <p className="text-zinc-600 text-sm">Create your account and find your companion</p>
+            <p className="text-zinc-600 text-sm">Create your account to start a private companion and reflection habit</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
