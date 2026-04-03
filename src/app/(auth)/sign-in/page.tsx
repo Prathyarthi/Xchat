@@ -31,7 +31,7 @@ export default function SignInPage() {
           <CardHeader className="text-center pb-0">
             <Link href="/" className="gradient-text font-bold text-2xl tracking-wider">Closr</Link>
             <h1 className="text-xl font-bold text-zinc-100 mt-3 mb-1">Welcome back</h1>
-            <p className="text-zinc-600 text-sm">Sign in to reconnect with your companions</p>
+            <p className="text-zinc-600 text-sm">Sign in to reconnect with your companions and daily reflections</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">

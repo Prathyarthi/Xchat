@@ -107,6 +107,19 @@ model JournalEntry {
   @@index([journalDayId, createdAt])
 }
 
+model AppEvent {
+  id         BigInt   @id @default(autoincrement())
+  name       String
+  userId     String?  @map("user_id")
+  path       String?
+  properties Json
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([name, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("app_events")
+}
+
 enum RelationshipType {
   ROMANTIC
   BESTIE

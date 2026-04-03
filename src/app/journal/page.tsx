@@ -18,6 +18,12 @@ interface JournalMonthDay {
   updatedAt: string
 }
 
+interface LimitUsage {
+  used: number
+  limit: number
+  remaining: number
+}
+
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export default function JournalCalendarPage() {
@@ -25,6 +31,7 @@ export default function JournalCalendarPage() {
   const router = useRouter()
   const [monthKey, setMonthKey] = useState(() => getTodayKey().slice(0, 7))
   const [days, setDays] = useState<JournalMonthDay[]>([])
+  const [journalUsage, setJournalUsage] = useState<LimitUsage | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -37,7 +44,10 @@ export default function JournalCalendarPage() {
     setLoading(true)
     fetch(`/api/journal/month?month=${monthKey}`, { credentials: 'include' })
       .then(res => res.json())
-      .then(data => setDays(data.days || []))
+      .then(data => {
+        setDays(data.days || [])
+        setJournalUsage(data.journalUsage ?? null)
+      })
       .finally(() => setLoading(false))
   }, [monthKey, user])
 
@@ -69,21 +79,21 @@ export default function JournalCalendarPage() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              className="rounded-full border-white/[0.08] text-zinc-400 hover:bg-white/[0.05]"
+              className="rounded-full border-white/8 text-zinc-400 hover:bg-white/5"
               onClick={() => setMonthKey(current => shiftMonth(current, -1))}
             >
               ← Previous
             </Button>
             <Button
               variant="outline"
-              className="rounded-full border-white/[0.08] text-zinc-400 hover:bg-white/[0.05]"
+              className="rounded-full border-white/8 text-zinc-400 hover:bg-white/5"
               onClick={() => setMonthKey(getTodayKey().slice(0, 7))}
             >
               Today
             </Button>
             <Button
               variant="outline"
-              className="rounded-full border-white/[0.08] text-zinc-400 hover:bg-white/[0.05]"
+              className="rounded-full border-white/8 text-zinc-400 hover:bg-white/5"
               onClick={() => setMonthKey(current => shiftMonth(current, 1))}
             >
               Next →
@@ -125,8 +135,8 @@ export default function JournalCalendarPage() {
                       href={`/journal/${dateKey}`}
                       className={`aspect-square rounded-2xl border p-2 flex flex-col justify-between transition ${
                         day
-                          ? 'glass-card border-white/[0.08] hover:border-white/[0.18] hover:bg-white/[0.06]'
-                          : 'border-white/[0.05] bg-white/[0.02] hover:bg-white/[0.04]'
+                          ? 'glass-card border-white/8 hover:border-white/18 hover:bg-white/6'
+                          : 'border-white/5 bg-white/2 hover:bg-white/4'
                       } ${isToday ? 'ring-1 ring-white/25' : ''}`}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -167,23 +177,42 @@ export default function JournalCalendarPage() {
               </div>
 
               <div className="grid grid-cols-1 gap-3">
-                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+                <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
                   <p className="text-xs uppercase tracking-wider text-zinc-700">Today</p>
                   <p className="text-sm text-zinc-400 mt-2">Capture what happened, how you felt, and what you need right now.</p>
                 </div>
-                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+                <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
                   <p className="text-xs uppercase tracking-wider text-zinc-700">Daily context</p>
                   <p className="text-sm text-zinc-400 mt-2">AI sees only the entries saved for the day you open.</p>
                 </div>
-                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+                <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
                   <p className="text-xs uppercase tracking-wider text-zinc-700">Habit loop</p>
                   <p className="text-sm text-zinc-400 mt-2">The calendar gives users a reason to return every day and keep their streak alive.</p>
                 </div>
+                {journalUsage && (
+                  <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
+                    <p className="text-xs uppercase tracking-wider text-zinc-700">Free plan usage</p>
+                    <p className="text-sm text-zinc-400 mt-2">
+                      {journalUsage.used}/{journalUsage.limit} entries used this month
+                    </p>
+                    <p className="text-xs text-zinc-600 mt-1">
+                      {journalUsage.remaining > 0
+                        ? `${journalUsage.remaining} entries left before upgrade`
+                        : 'Free journal limit reached'}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <Button asChild className="rounded-full">
                 <Link href={`/journal/${todayKey}`}>Open today&apos;s journal</Link>
               </Button>
+
+              {journalUsage && journalUsage.remaining <= 0 && (
+                <Button asChild variant="outline" className="rounded-full border-white/8 text-zinc-300 hover:bg-white/5">
+                  <Link href="/pricing">Upgrade for more journal space</Link>
+                </Button>
+              )}
 
               {loading && <p className="text-xs text-zinc-700 text-center">Loading your month...</p>}
             </CardContent>

@@ -5,6 +5,8 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { TrackedLink } from '@/components/analytics/tracked-link'
+import { heroProofPoints, pricingPlans } from '@/lib/pricing'
 
 async function getFeaturedAgents(userId?: string) {
   if (!userId) return []
@@ -21,10 +23,10 @@ async function getFeaturedAgents(userId?: string) {
 }
 
 const FEATURES = [
-  { icon: '🧠', title: 'Emotional Intelligence', desc: 'Your companion detects your mood and responds with genuine empathy every time.' },
-  { icon: '✨', title: 'Unique Personalities',   desc: 'Each companion has their own voice, backstory, and way of seeing the world.' },
-  { icon: '💬', title: 'Deep Conversations',     desc: 'Move beyond small talk. Explore ideas, share feelings, and grow together.' },
-  { icon: '🔒', title: 'Always There',           desc: 'No judgement, no schedules. Your companion is ready whenever you need them.' },
+  { icon: '🧠', title: 'Memory That Builds', desc: 'Closr keeps context between conversations so the relationship feels cumulative instead of disposable.' },
+  { icon: '🫶', title: 'Emotion-Aware Replies', desc: 'Messages can respond to mood and relationship style, making support feel more personal.' },
+  { icon: '🗓️', title: 'Daily Reflection Loop', desc: 'Journal days and AI reflections turn private thoughts into an everyday habit.' },
+  { icon: '📨', title: 'Follow-Up Energy', desc: 'Scheduled messages and check-ins create a sense of continuity that most chat apps never reach.' },
 ]
 
 export default async function LandingPage() {
@@ -58,15 +60,19 @@ export default async function LandingPage() {
 
           <div className="flex gap-3 justify-center flex-wrap">
             <Button asChild size="lg" className="rounded-full px-8">
-              <Link href="/explore">Start Exploring →</Link>
+              <TrackedLink href="/sign-up" eventName="sign_up_cta_clicked" eventProperties={{ source: 'hero_primary' }}>
+                Start Free
+              </TrackedLink>
             </Button>
-            <Button asChild size="lg" variant="outline" className="rounded-full px-8 border-white/[0.08] text-zinc-400 hover:bg-white/[0.05]">
-              <Link href="/agents/create">Create a Companion</Link>
+            <Button asChild size="lg" variant="outline" className="rounded-full px-8 border-white/8 text-zinc-400 hover:bg-white/5">
+              <TrackedLink href="/pricing" eventName="pricing_cta_clicked" eventProperties={{ source: 'hero_secondary' }}>
+                See Pricing
+              </TrackedLink>
             </Button>
           </div>
 
           <div className="flex gap-3 justify-center flex-wrap mt-14">
-            {['private companions', 'day-based journal', 'emotion-aware chat'].map(label => (
+            {heroProofPoints.map(label => (
               <div key={label} className="glass rounded-full px-4 py-2 text-center">
                 <div className="text-xs text-zinc-500">{label}</div>
               </div>
@@ -83,7 +89,7 @@ export default async function LandingPage() {
               Why <span className="gradient-text">Closr</span>?
             </h2>
             <p className="text-zinc-600 text-sm max-w-sm mx-auto">
-              Built for humans who want more than a chatbot — a companion that actually gets you.
+              Built for people who want more than a chatbot: private support, daily reflection, and a companion that stays coherent over time.
             </p>
           </div>
 
@@ -161,29 +167,79 @@ export default async function LandingPage() {
         </section>
       )}
 
+      <section className="px-6 py-20">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-extrabold mb-3">
+              Monetize The <span className="gradient-text">Continuity</span>
+            </h2>
+            <p className="text-zinc-600 text-sm max-w-xl mx-auto">
+              Free proves the loop. Premium sells deeper memory, more reflections, and proactive care instead of generic message packs.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {pricingPlans.map(plan => (
+              <Card key={plan.slug} className="rounded-3xl">
+                <CardContent className="p-6 flex flex-col gap-4">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-zinc-700">{plan.eyebrow}</p>
+                    <h3 className="text-2xl font-bold text-zinc-100 mt-2">{plan.name}</h3>
+                    <p className="text-3xl font-bold gradient-text mt-3">{plan.monthlyPrice}</p>
+                    <p className="text-sm text-zinc-600 mt-3 leading-relaxed">{plan.description}</p>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    {plan.features.slice(0, 4).map(feature => (
+                      <div key={feature.label} className="text-sm text-zinc-400">
+                        {feature.included ? '✓' : '–'} {feature.label}
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button asChild variant={plan.highlight ? 'default' : 'outline'} className="rounded-full mt-auto border-white/8 text-zinc-500 hover:bg-white/5">
+                    <TrackedLink href={plan.ctaHref} eventName="pricing_cta_clicked" eventProperties={{ plan: plan.slug, source: 'homepage_pricing' }}>
+                      {plan.ctaLabel}
+                    </TrackedLink>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── CTA ── */}
       <section className="px-6 py-16">
         <div className="max-w-lg mx-auto">
-          <Card className="rounded-3xl border-white/[0.08] text-center">
+          <Card className="rounded-3xl border-white/8 text-center">
             <CardContent className="p-12">
               <div className="text-5xl mb-5 animate-float">💗</div>
               <h2 className="text-2xl md:text-3xl font-extrabold text-zinc-100 mb-3 leading-tight">
-                Ready to build your <span className="gradient-text">companion</span>?
+                Ready to build your <span className="gradient-text">daily support loop</span>?
               </h2>
               <p className="text-zinc-600 text-sm mb-8 leading-relaxed">
-                Create an AI companion that is yours, remembers your context, and supports your day-to-day life.
+                Start with one companion, one conversation, and one journal day. That is enough to feel what makes Closr different.
               </p>
               <Button asChild size="lg" className="rounded-full px-10">
-                <Link href="/sign-up">Get Started For Free</Link>
+                <TrackedLink href="/sign-up" eventName="sign_up_cta_clicked" eventProperties={{ source: 'footer_cta' }}>
+                  Get Started For Free
+                </TrackedLink>
               </Button>
             </CardContent>
           </Card>
         </div>
       </section>
 
-      <footer className="border-t border-white/[0.06] px-6 py-8 text-center">
+      <footer className="border-t border-white/6 px-6 py-8 text-center">
         <div className="gradient-text text-sm font-bold mb-1">Closr</div>
-        <div className="text-xs text-zinc-700">AI companions for the human soul.</div>
+        <div className="text-xs text-zinc-700">Private AI companionship with memory, reflection, and emotional continuity.</div>
+        <div className="flex justify-center gap-4 mt-4 text-xs text-zinc-600">
+          <Link href="/pricing">Pricing</Link>
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
+          <Link href="/safety">Safety</Link>
+        </div>
       </footer>
 
     </div>

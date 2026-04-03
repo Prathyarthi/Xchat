@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { detectEmotion } from '@/lib/emotion'
 import { generateJournalDaySummary, generateJournalReflection } from '@/lib/ai'
+import { trackEvent } from '@/features/analytics/lib/server'
+import { getFreeJournalUsage } from '@/features/pricing/lib/limits'
 
 function parseDateKey(value: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
@@ -75,19 +77,22 @@ export const journal = new Elysia({ prefix: '/journal' })
         return { error: 'Invalid month. Use YYYY-MM.' }
       }
 
-      const days = await prisma.journalDay.findMany({
-        where: {
-          userId: session.userId,
-          date: {
-            gte: parsed.start,
-            lt: parsed.end,
+      const [days, journalUsage] = await Promise.all([
+        prisma.journalDay.findMany({
+          where: {
+            userId: session.userId,
+            date: {
+              gte: parsed.start,
+              lt: parsed.end,
+            },
           },
-        },
-        orderBy: { date: 'asc' },
-        include: {
-          _count: { select: { entries: true } },
-        },
-      })
+          orderBy: { date: 'asc' },
+          include: {
+            _count: { select: { entries: true } },
+          },
+        }),
+        getFreeJournalUsage(session.userId),
+      ])
 
       return {
         month: parsed.monthKey,
@@ -99,6 +104,7 @@ export const journal = new Elysia({ prefix: '/journal' })
           entryCount: day._count.entries,
           updatedAt: day.updatedAt,
         })),
+        journalUsage,
       }
     },
     {
@@ -117,7 +123,10 @@ export const journal = new Elysia({ prefix: '/journal' })
       return { error: 'Invalid date. Use YYYY-MM-DD.' }
     }
 
-    const day = await getSerializedJournalDay(session.userId, date)
+    const [day, journalUsage] = await Promise.all([
+      getSerializedJournalDay(session.userId, date),
+      getFreeJournalUsage(session.userId),
+    ])
 
     return {
       day: day ?? {
@@ -128,6 +137,7 @@ export const journal = new Elysia({ prefix: '/journal' })
         entries: [],
         updatedAt: null,
       },
+      journalUsage,
     }
   })
   .post(
@@ -140,6 +150,17 @@ export const journal = new Elysia({ prefix: '/journal' })
       if (!date) {
         ctx.set.status = 400
         return { error: 'Invalid date. Use YYYY-MM-DD.' }
+      }
+
+      const journalUsage = await getFreeJournalUsage(session.userId)
+      if (journalUsage.remaining <= 0) {
+        ctx.set.status = 403
+        return {
+          code: 'FREE_JOURNAL_LIMIT_REACHED',
+          error: 'You have reached the free journal limit for this month. Upgrade to keep writing.',
+          journalUsage,
+          upgradeUrl: '/pricing',
+        }
       }
 
       const detectedMood = detectEmotion(ctx.body.content)
@@ -170,10 +191,29 @@ export const journal = new Elysia({ prefix: '/journal' })
         },
       })
 
+      const entryCount = await prisma.journalEntry.count({
+        where: { journalDayId: day.id },
+      })
+
+      await trackEvent({
+        name: entryCount === 1 ? 'first_journal_entry_created' : 'journal_entry_created',
+        userId: session.userId,
+        path: `/journal/${ctx.body.date}`,
+        properties: {
+          date: ctx.body.date,
+          mood: entryMood ?? null,
+        },
+      })
+
       const updatedDay = await getSerializedJournalDay(session.userId, date)
 
       return {
         day: updatedDay,
+        journalUsage: {
+          ...journalUsage,
+          used: journalUsage.used + 1,
+          remaining: Math.max(0, journalUsage.remaining - 1),
+        },
       }
     },
     {
@@ -223,6 +263,16 @@ export const journal = new Elysia({ prefix: '/journal' })
       }
 
       try {
+        await trackEvent({
+          name: ctx.body.action === 'reflect' ? 'journal_reflection_requested' : 'journal_summary_requested',
+          userId: session.userId,
+          path: `/journal/${ctx.params.date}`,
+          properties: {
+            date: ctx.params.date,
+            entryCount: entries.length,
+          },
+        })
+
         const output = ctx.body.action === 'reflect'
           ? await generateJournalReflection(entries, {
               dateLabel: ctx.params.date,
@@ -238,6 +288,16 @@ export const journal = new Elysia({ prefix: '/journal' })
           where: { id: day.id },
           data: {
             summary: buildDaySummary(output, entries[entries.length - 1]?.content ?? ''),
+          },
+        })
+
+        await trackEvent({
+          name: ctx.body.action === 'reflect' ? 'journal_reflection_completed' : 'journal_summary_completed',
+          userId: session.userId,
+          path: `/journal/${ctx.params.date}`,
+          properties: {
+            date: ctx.params.date,
+            entryCount: entries.length,
           },
         })
 

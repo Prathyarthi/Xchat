@@ -1,6 +1,7 @@
 import Elysia, { t } from 'elysia'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/auth'
+import { trackEvent } from '@/features/analytics/lib/server'
 
 export const auth = new Elysia()
   .post(
@@ -17,6 +18,15 @@ export const auth = new Elysia()
       const hashed = await hashPassword(password)
       const user = await prisma.user.create({
         data: { name, email, password: hashed, role: 'HUMAN', avatar },
+      })
+
+      await trackEvent({
+        name: 'sign_up_completed',
+        userId: user.id,
+        path: '/sign-up',
+        properties: {
+          avatarSelected: Boolean(avatar),
+        },
       })
 
       return { user: { id: user.id, name: user.name, email: user.email } }

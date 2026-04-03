@@ -27,6 +27,12 @@ interface JournalDay {
   updatedAt: string | null
 }
 
+interface LimitUsage {
+  used: number
+  limit: number
+  remaining: number
+}
+
 const MOOD_OPTIONS = [
   { value: '', label: 'Auto detect from entry' },
   { value: 'happy', label: 'Happy' },
@@ -53,6 +59,7 @@ export default function JournalDayPage() {
   const [error, setError] = useState<string | null>(null)
   const [aiOutput, setAiOutput] = useState<string | null>(null)
   const [lastAction, setLastAction] = useState<JournalAction | null>(null)
+  const [journalUsage, setJournalUsage] = useState<LimitUsage | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/sign-in')
@@ -69,6 +76,7 @@ export default function JournalDayPage() {
           throw new Error(data.error || 'Failed to load journal day.')
         }
         setDay(data.day)
+        setJournalUsage(data.journalUsage ?? null)
         setAiOutput(null)
         setLastAction(null)
       })
@@ -101,6 +109,7 @@ export default function JournalDayPage() {
       }
 
       setDay(data.day)
+      setJournalUsage(data.journalUsage ?? null)
       setEntry('')
       setMood('')
     } catch (err) {
@@ -134,6 +143,7 @@ export default function JournalDayPage() {
       const refreshData = await refresh.json()
       if (refresh.ok) {
         setDay(refreshData.day)
+        setJournalUsage(refreshData.journalUsage ?? null)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to run journal AI action.')
@@ -151,6 +161,7 @@ export default function JournalDayPage() {
   }
 
   const dayMood = day?.mood ? emotionConfig[day.mood as keyof typeof emotionConfig] : null
+  const hasJournalLimitReached = Boolean(journalUsage && journalUsage.remaining <= 0)
 
   return (
     <div className="min-h-[calc(100vh-64px)] pb-16 px-4 pt-8">
@@ -194,14 +205,14 @@ export default function JournalDayPage() {
                   onChange={e => setEntry(e.target.value)}
                   placeholder="What was this day like for you?"
                   className="min-h-[180px] resize-none"
-                  disabled={saving}
+                  disabled={saving || hasJournalLimitReached}
                 />
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <select
                     value={mood}
                     onChange={e => setMood(e.target.value)}
-                    disabled={saving}
+                    disabled={saving || hasJournalLimitReached}
                     className="h-10 rounded-md border border-input bg-transparent px-3 text-sm text-zinc-300 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
                   >
                     {MOOD_OPTIONS.map(option => (
@@ -211,12 +222,22 @@ export default function JournalDayPage() {
                     ))}
                   </select>
 
-                  <Button onClick={handleSave} disabled={saving || !entry.trim()} className="rounded-full">
+                  <Button onClick={handleSave} disabled={saving || !entry.trim() || hasJournalLimitReached} className="rounded-full">
                     {saving ? 'Saving...' : 'Save entry'}
                   </Button>
                 </div>
 
                 {error && <p className="text-sm text-red-400">{error}</p>}
+                {hasJournalLimitReached && (
+                  <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                    <p className="text-sm text-amber-200">Free journal limit reached for this month.</p>
+                    <div className="mt-3">
+                      <Button asChild size="sm" className="rounded-full">
+                        <Link href="/pricing">Upgrade for more entries</Link>
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -320,6 +341,18 @@ export default function JournalDayPage() {
                     <p className="text-[10px] text-zinc-600 mt-1">{dayMood?.label ?? 'No mood yet'}</p>
                   </div>
                 </div>
+
+                {journalUsage && (
+                  <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
+                    <p className="text-[10px] uppercase tracking-wider text-zinc-700 mb-2">Free plan usage</p>
+                    <p className="text-sm text-zinc-400">{journalUsage.used}/{journalUsage.limit} entries used this month</p>
+                    <p className="text-xs text-zinc-600 mt-1">
+                      {journalUsage.remaining > 0
+                        ? `${journalUsage.remaining} entries left`
+                        : 'Upgrade to add more entries this month'}
+                    </p>
+                  </div>
+                )}
 
                 {day?.summary && (
                   <div className="rounded-2xl border border-white/8 bg-white/3 p-4">

@@ -6,6 +6,8 @@ import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { buildActivationSteps, getLifecycleNudge } from '@/lib/onboarding'
+import { pricingPlans } from '@/lib/pricing'
 
 const RELATIONSHIP_BADGES: Record<string, { label: string; className: string }> = {
   ROMANTIC: { label: '💕 Romantic', className: 'border-pink-500/40 text-pink-400 bg-pink-500/10' },
@@ -31,7 +33,7 @@ export default async function DashboardPage() {
 
   const userId = session.user.id as string
 
-  const [conversations, createdAgents] = await Promise.all([
+  const [conversations, createdAgents, journalDayCount, reflectionCount, latestJournalDay] = await Promise.all([
     prisma.conversation.findMany({
       where: { userId },
       include: {
@@ -46,10 +48,41 @@ export default async function DashboardPage() {
       take: 6,
       include: { _count: { select: { conversations: true } } },
     }),
+    prisma.journalDay.count({
+      where: { userId },
+    }),
+    prisma.journalDay.count({
+      where: {
+        userId,
+        summary: { not: null },
+      },
+    }),
+    prisma.journalDay.findFirst({
+      where: { userId },
+      orderBy: { updatedAt: 'desc' },
+      select: { updatedAt: true },
+    }),
   ])
 
   const connectedAgentIds = new Set(conversations.map(c => c.agentId))
   const unchattedAgents = createdAgents.filter(a => !connectedAgentIds.has(a.id)).slice(0, 6)
+  const activationSteps = buildActivationSteps({
+    companionCount: createdAgents.length,
+    conversationCount: conversations.length,
+    journalDayCount,
+    reflectionCount,
+    lastConversationAt: conversations[0]?.updatedAt ?? null,
+    lastJournalAt: latestJournalDay?.updatedAt ?? null,
+  })
+  const nextNudge = getLifecycleNudge({
+    companionCount: createdAgents.length,
+    conversationCount: conversations.length,
+    journalDayCount,
+    reflectionCount,
+    lastConversationAt: conversations[0]?.updatedAt ?? null,
+    lastJournalAt: latestJournalDay?.updatedAt ?? null,
+  })
+  const premiumPlan = pricingPlans.find(plan => plan.slug === 'plus')
 
   return (
     <div className="min-h-[calc(100vh-64px)] pb-16 px-4 pt-8">
@@ -63,8 +96,117 @@ export default async function DashboardPage() {
             <Button asChild size="sm" className="rounded-full">
               <Link href="/journal">Open Journal</Link>
             </Button>
+            <Button asChild size="sm" variant="outline" className="rounded-full border-white/8 text-zinc-300 hover:bg-white/5">
+              <Link href="/pricing">See plans</Link>
+            </Button>
           </div>
         </div>
+
+        <section className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-5">
+          <Card className="rounded-3xl">
+            <CardContent className="p-6 flex flex-col gap-5">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <h2 className="text-lg font-bold text-zinc-100">Activation checklist</h2>
+                  <p className="text-sm text-zinc-600 mt-1">
+                    The fastest path to value is first chat, first journal entry, and first AI reflection.
+                  </p>
+                </div>
+                <div className="rounded-full border border-white/8 px-3 py-1 text-xs text-zinc-400">
+                  {activationSteps.filter(step => step.completed).length}/{activationSteps.length} complete
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {activationSteps.map(step => (
+                  <Link
+                    key={step.title}
+                    href={step.href}
+                    className={`rounded-2xl border p-4 transition ${
+                      step.completed
+                        ? 'border-teal-500/30 bg-teal-500/8'
+                        : 'border-white/8 bg-white/3 hover:bg-white/5'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-semibold text-sm text-zinc-100">{step.title}</p>
+                      <span className="text-xs text-zinc-400">{step.completed ? 'Done' : 'Next'}</span>
+                    </div>
+                    <p className="text-xs text-zinc-600 mt-2 leading-relaxed">{step.description}</p>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl">
+            <CardContent className="p-6 flex flex-col gap-5">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-zinc-700">Lifecycle nudge</p>
+                <h2 className="text-lg font-bold text-zinc-100 mt-2">
+                  {nextNudge?.title ?? 'You are in the habit loop'}
+                </h2>
+                <p className="text-sm text-zinc-600 mt-2 leading-relaxed">
+                  {nextNudge?.body ?? 'You have already crossed the first-value milestones. Keep returning to deepen memory and reflection.'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
+                  <p className="text-xl font-bold gradient-text">{conversations.length}</p>
+                  <p className="text-[10px] text-zinc-600 mt-1">conversations</p>
+                </div>
+                <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
+                  <p className="text-xl font-bold gradient-text">{journalDayCount}</p>
+                  <p className="text-[10px] text-zinc-600 mt-1">journal days</p>
+                </div>
+                <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
+                  <p className="text-xl font-bold gradient-text">{reflectionCount}</p>
+                  <p className="text-[10px] text-zinc-600 mt-1">AI reflections</p>
+                </div>
+              </div>
+
+              {nextNudge && (
+                <Button asChild className="rounded-full">
+                  <Link href={nextNudge.href}>{nextNudge.cta}</Link>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+
+        {premiumPlan && (
+          <section>
+            <Card className="rounded-3xl border-white/10">
+              <CardContent className="p-6 md:p-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+                <div className="max-w-2xl">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-700">{premiumPlan.eyebrow}</p>
+                  <h2 className="text-2xl font-bold text-zinc-100 mt-2">
+                    Upgrade when you want deeper memory and proactive check-ins
+                  </h2>
+                  <p className="text-sm text-zinc-600 mt-2 leading-relaxed">
+                    {premiumPlan.description}
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {premiumPlan.features.slice(0, 4).map(feature => (
+                      <Badge key={feature.label} variant="outline" className="border-white/8 text-zinc-400 rounded-full">
+                        {feature.label}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="md:text-right">
+                  <p className="text-3xl font-bold gradient-text">{premiumPlan.monthlyPrice}</p>
+                  <p className="text-xs text-zinc-600 mt-1">Target launch price</p>
+                  <Button asChild className="rounded-full mt-4">
+                    <Link href="/pricing">Compare plans</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* My Companions */}
         <section>
@@ -93,7 +235,7 @@ export default async function DashboardPage() {
                 return (
                   <Card key={conv.id} className="rounded-3xl">
                     <CardContent className="p-5 flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center text-2xl bg-zinc-800/60 border border-white/[0.08]">
+                      <div className="w-14 h-14 rounded-2xl shrink-0 flex items-center justify-center text-2xl bg-zinc-800/60 border border-white/8">
                         {agent.avatar || '✨'}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -114,7 +256,7 @@ export default async function DashboardPage() {
                           <p className="text-xs text-zinc-700 mt-0.5">{timeAgo(new Date(lastMsg.createdAt))}</p>
                         )}
                       </div>
-                      <Button asChild size="sm" variant="ghost" className="text-zinc-400 hover:text-zinc-100 rounded-xl flex-shrink-0">
+                      <Button asChild size="sm" variant="ghost" className="text-zinc-400 hover:text-zinc-100 rounded-xl shrink-0">
                         <Link href={`/chat/${conv.id}`}>Continue →</Link>
                       </Button>
                     </CardContent>
@@ -142,7 +284,7 @@ export default async function DashboardPage() {
                   <Card key={agent.id} className="rounded-3xl">
                     <CardContent className="p-5 flex flex-col gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center text-xl bg-zinc-800/60 border border-white/[0.08]">
+                        <div className="w-12 h-12 rounded-2xl shrink-0 flex items-center justify-center text-xl bg-zinc-800/60 border border-white/8">
                           {agent.avatar || '✨'}
                         </div>
                         <div className="flex-1 min-w-0">
