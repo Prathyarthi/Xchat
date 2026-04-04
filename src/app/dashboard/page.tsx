@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { buildActivationSteps, getLifecycleNudge } from '@/lib/onboarding'
 import { pricingPlans } from '@/lib/pricing'
+import { DashboardSubscribeCta } from '@/features/subscriptions/components/dashboard-subscribe-cta'
 
 const RELATIONSHIP_BADGES: Record<string, { label: string; className: string }> = {
   ROMANTIC: { label: '💕 Romantic', className: 'border-pink-500/40 text-pink-400 bg-pink-500/10' },
@@ -83,6 +84,8 @@ export default async function DashboardPage() {
     lastJournalAt: latestJournalDay?.updatedAt ?? null,
   })
   const premiumPlan = pricingPlans.find(plan => plan.slug === 'plus')
+  const subscription = await prisma.subscription.findUnique({ where: { userId } })
+  const plusActive = subscription?.status === 'ACTIVE' && subscription.planSlug === 'plus'
 
   return (
     <div className="min-h-[calc(100vh-64px)] pb-16 px-4 pt-8">
@@ -101,6 +104,8 @@ export default async function DashboardPage() {
             </Button>
           </div>
         </div>
+
+        <DashboardSubscribeCta />
 
         <section className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-5">
           <Card className="rounded-3xl">
@@ -175,7 +180,7 @@ export default async function DashboardPage() {
           </Card>
         </section>
 
-        {premiumPlan && (
+        {premiumPlan && !plusActive && (
           <section>
             <Card className="rounded-3xl border-white/10">
               <CardContent className="p-6 md:p-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
@@ -197,12 +202,36 @@ export default async function DashboardPage() {
                 </div>
 
                 <div className="md:text-right">
-                  <p className="text-3xl font-bold gradient-text">{premiumPlan.monthlyPrice}</p>
-                  <p className="text-xs text-zinc-600 mt-1">Target launch price</p>
+                  <div className="flex items-baseline gap-2 justify-end flex-wrap">
+                    <p className="text-3xl font-bold gradient-text tabular-nums">{premiumPlan.monthlyPrice}</p>
+                    {premiumPlan.pricePeriod && (
+                      <span className="text-sm text-zinc-500">{premiumPlan.pricePeriod}</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-zinc-600 mt-1">Billed in INR via Razorpay</p>
                   <Button asChild className="rounded-full mt-4">
                     <Link href="/pricing">Compare plans</Link>
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          </section>
+        )}
+
+        {plusActive && (
+          <section>
+            <Card className="rounded-3xl border-teal-500/20 bg-teal-500/[0.04]">
+              <CardContent className="p-6 md:p-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-teal-500/80">Closr Plus</p>
+                  <h2 className="text-xl font-bold text-zinc-100 mt-2">You have full continuity unlocked</h2>
+                  <p className="text-sm text-zinc-500 mt-1">
+                    Higher limits and proactive features are active on your account.
+                  </p>
+                </div>
+                <Button asChild variant="outline" className="rounded-full border-white/10 shrink-0">
+                  <Link href="/billing">Billing</Link>
+                </Button>
               </CardContent>
             </Card>
           </section>

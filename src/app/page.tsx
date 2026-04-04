@@ -171,21 +171,36 @@ export default async function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-extrabold mb-3">
-              Monetize The <span className="gradient-text">Continuity</span>
+              Simple <span className="gradient-text">pricing</span> in INR
             </h2>
             <p className="text-zinc-600 text-sm max-w-xl mx-auto">
-              Free proves the loop. Premium sells deeper memory, more reflections, and proactive care instead of generic message packs.
+              Two plans: start free, or upgrade to Plus for deeper memory, richer reflections, and proactive follow-ups.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {pricingPlans.map(plan => (
-              <Card key={plan.slug} className="rounded-3xl">
+              <Card
+                key={plan.slug}
+                className={`rounded-3xl relative ${plan.highlight ? 'border-teal-500/20 shadow-[0_0_0_1px_rgba(45,212,191,0.1)]' : ''}`}
+              >
+                {plan.badge && (
+                  <div className="absolute -top-2.5 right-4">
+                    <Badge className="rounded-full border border-teal-400/30 bg-teal-500/15 text-teal-200 text-[10px] uppercase tracking-wider">
+                      {plan.badge}
+                    </Badge>
+                  </div>
+                )}
                 <CardContent className="p-6 flex flex-col gap-4">
                   <div>
                     <p className="text-[10px] uppercase tracking-wider text-zinc-700">{plan.eyebrow}</p>
                     <h3 className="text-2xl font-bold text-zinc-100 mt-2">{plan.name}</h3>
-                    <p className="text-3xl font-bold gradient-text mt-3">{plan.monthlyPrice}</p>
+                    <div className="flex items-baseline gap-2 flex-wrap mt-3">
+                      <p className="text-3xl font-bold gradient-text tabular-nums">{plan.monthlyPrice}</p>
+                      {plan.pricePeriod && (
+                        <span className="text-sm text-zinc-500">{plan.pricePeriod}</span>
+                      )}
+                    </div>
                     <p className="text-sm text-zinc-600 mt-3 leading-relaxed">{plan.description}</p>
                   </div>
 

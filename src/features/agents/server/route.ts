@@ -39,11 +39,11 @@ export const agents = new Elysia({ prefix: '/agents' })
       const { name, description, personality, interests, avatar, relationshipType } = ctx.body
       const companionUsage = await getFreeCompanionUsage(session.userId)
 
-      if (companionUsage.used >= companionUsage.limit) {
+      if (companionUsage.remaining <= 0) {
         ctx.set.status = 403
         return {
           code: 'FREE_COMPANION_LIMIT_REACHED',
-          error: 'Free plan includes 1 companion. Upgrade to create more.',
+          error: `You can create up to ${companionUsage.limit} companions on your current plan. Upgrade to create more.`,
           companionUsage,
           upgradeUrl: '/pricing',
         }
