@@ -19,6 +19,7 @@ export function Navbar() {
       ? [
           { href: '/dashboard', label: 'Dashboard' },
           { href: '/journal', label: 'Journal' },
+          ...(user.role === 'ADMIN' ? [{ href: '/analytics', label: 'Analytics' }] : []),
         ]
       : []),
   ]

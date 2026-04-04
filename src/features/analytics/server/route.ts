@@ -31,6 +31,10 @@ export const analytics = new Elysia({ prefix: '/analytics' })
       ctx.set.status = 401
       return { error: 'Not authenticated' }
     }
+    if (session.role !== 'ADMIN') {
+      ctx.set.status = 403
+      return { error: 'Forbidden' }
+    }
 
     const snapshot = await getGrowthSnapshot()
     return { snapshot }
