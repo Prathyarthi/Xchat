@@ -66,7 +66,7 @@ export default async function LandingPage() {
             </Button>
             <Button asChild size="lg" variant="outline" className="rounded-full px-8 border-white/8 text-zinc-400 hover:bg-white/5">
               <TrackedLink href="/pricing" eventName="pricing_cta_clicked" eventProperties={{ source: 'hero_secondary' }}>
-                See Pricing
+                Subscribe
               </TrackedLink>
             </Button>
           </div>
@@ -171,7 +171,7 @@ export default async function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-extrabold mb-3">
-              Simple <span className="gradient-text">pricing</span> in INR
+              <span className="gradient-text">Pricing</span>
             </h2>
             <p className="text-zinc-600 text-sm max-w-xl mx-auto">
               Two plans: start free, or upgrade to Plus for deeper memory, richer reflections, and proactive follow-ups.
@@ -250,7 +250,7 @@ export default async function LandingPage() {
         <div className="gradient-text text-sm font-bold mb-1">Closr</div>
         <div className="text-xs text-zinc-700">Private AI companionship with memory, reflection, and emotional continuity.</div>
         <div className="flex justify-center gap-4 mt-4 text-xs text-zinc-600">
-          <Link href="/pricing">Pricing</Link>
+          <Link href="/pricing">Subscribe</Link>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
           <Link href="/safety">Safety</Link>

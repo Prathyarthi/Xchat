@@ -8,13 +8,13 @@ import { useSubscribePlus } from '../hooks/use-subscribe-plus'
 
 export function SubscriptionFlow() {
   const { user, loading: authLoading } = useAuth()
-  const { data: subData, isLoading: subLoading } = useSubscriptionMe(!authLoading && Boolean(user))
+  const { data: subData, isLoading: subLoading } = useSubscriptionMe(!authLoading)
   const { subscribeToPlus, subscribing, banner, clearBanner } = useSubscribePlus()
 
   const plusActive = subData?.subscription?.status === 'ACTIVE' && subData.subscription.planSlug === 'plus'
   const plusPending = subData?.subscription?.status === 'PENDING'
 
-  if (authLoading || (user && subLoading)) {
+  if (authLoading || subLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-pulse">
         <div className="h-96 rounded-3xl bg-white/[0.04]" />

@@ -71,9 +71,7 @@ export function PricingCards({
                     </p>
                   )}
                   {isPlus && loggedIn && !razorpayReady && !plusActive && (
-                    <p className="text-xs text-zinc-600 mt-3">
-                      Razorpay is not configured in this environment (missing keys or plan id).
-                    </p>
+                    <p className="text-xs text-zinc-600 mt-3">Payments are not configured.</p>
                   )}
                   {plan.note && !isPlus && (
                     <p className="text-xs text-zinc-600 mt-3 leading-relaxed">{plan.note}</p>
@@ -150,7 +148,6 @@ export function PricingCards({
                     variant="outline"
                     className="rounded-full w-full mt-auto border-white/10 text-zinc-500"
                     disabled
-                    title="Set RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, and RAZORPAY_PLUS_PLAN_ID on the server"
                   >
                     Subscribe to Closr Plus
                   </Button>
@@ -173,7 +170,6 @@ export function PricingCards({
                     variant="outline"
                     className="rounded-full w-full mt-auto border-white/10 text-zinc-500"
                     disabled
-                    title="Razorpay is not configured"
                   >
                     Complete subscription
                   </Button>

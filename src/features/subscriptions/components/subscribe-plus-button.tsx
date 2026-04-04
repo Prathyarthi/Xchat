@@ -47,7 +47,6 @@ export function SubscribePlusButton({
         variant={variant}
         size={size}
         disabled={!razorpayReady || subscribing}
-        title={!razorpayReady ? 'Add Razorpay keys and plan id in server env to enable checkout' : undefined}
         className={cn('rounded-full', fullWidth && 'w-full', className)}
         onClick={subscribeToPlus}
       >

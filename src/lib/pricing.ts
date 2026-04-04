@@ -8,7 +8,7 @@ export interface PricingPlan {
   name: string
   eyebrow: string
   description: string
-  /** Main price line, e.g. ₹0 or ₹999 */
+  /** Main price line shown on cards */
   monthlyPrice: string
   /** Shown next to the price, e.g. /month */
   pricePeriod?: string
@@ -21,10 +21,6 @@ export interface PricingPlan {
   note?: string
   features: PricingFeature[]
 }
-
-/** Shown under pricing hero on /pricing */
-export const pricingCurrencyFootnote =
-  'Prices are in Indian Rupees (INR). Applicable taxes may be added at checkout per Razorpay and local rules.'
 
 export const pricingPlans: PricingPlan[] = [
   {

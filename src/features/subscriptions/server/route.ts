@@ -2,15 +2,21 @@ import Elysia, { t } from 'elysia'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { getRazorpay } from '@/features/subscriptions/lib/razorpay'
-import { isRazorpayConfigured, razorpayPlusPlanId, razorpayPublicKey } from '@/features/subscriptions/lib/config'
+import { isRazorpayConfigured, razorpayPlanId, razorpayPublicKey } from '@/features/subscriptions/lib/config'
 import { verifySubscriptionPaymentSignature } from '@/features/subscriptions/lib/verify-payment'
 
 export const subscriptions = new Elysia({ prefix: '/subscriptions' })
   .get('/me', async (ctx) => {
+    const razorpayReady = isRazorpayConfigured()
+
     const session = await getSession(ctx.request)
     if (!session) {
-      ctx.set.status = 401
-      return { error: 'Not authenticated' }
+      return {
+        data: {
+          subscription: null,
+          razorpayReady,
+        },
+      }
     }
 
     const subscription = await prisma.subscription.findUnique({
@@ -20,7 +26,7 @@ export const subscriptions = new Elysia({ prefix: '/subscriptions' })
     return {
       data: {
         subscription,
-        razorpayReady: isRazorpayConfigured(),
+        razorpayReady,
       },
     }
   })
@@ -34,10 +40,10 @@ export const subscriptions = new Elysia({ prefix: '/subscriptions' })
       }
 
       const rzp = getRazorpay()
-      const planId = razorpayPlusPlanId()
+      const planId = razorpayPlanId()
       if (!rzp || !planId) {
         ctx.set.status = 503
-        return { error: 'Payments are not configured. Set RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, and RAZORPAY_PLUS_PLAN_ID.' }
+        return { error: 'Payments are not configured.' }
       }
 
       if (ctx.body.planSlug !== 'plus') {

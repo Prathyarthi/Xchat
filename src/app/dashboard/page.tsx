@@ -208,7 +208,7 @@ export default async function DashboardPage() {
                       <span className="text-sm text-zinc-500">{premiumPlan.pricePeriod}</span>
                     )}
                   </div>
-                  <p className="text-xs text-zinc-600 mt-1">Billed in INR via Razorpay</p>
+                  <p className="text-xs text-zinc-600 mt-1">Billed via Razorpay</p>
                   <Button asChild className="rounded-full mt-4">
                     <Link href="/pricing">Compare plans</Link>
                   </Button>

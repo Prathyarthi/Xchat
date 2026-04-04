@@ -1,6 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { pricingCurrencyFootnote } from '@/lib/pricing'
 import { TrackedLink } from '@/components/analytics/tracked-link'
 import { SubscriptionFlow } from '@/features/subscriptions/components/subscription-flow'
 
@@ -14,9 +13,8 @@ export default function PricingPage() {
             Two simple plans
           </h1>
           <p className="text-zinc-500 text-sm md:text-base leading-relaxed">
-            Pick where you want to start. Free proves the loop; Plus unlocks memory, reflection, and follow-ups that feel continuous — priced in INR for India.
+            Pick where you want to start. Free proves the loop; Plus unlocks memory, reflection, and follow-ups that feel continuous.
           </p>
-          <p className="text-xs text-zinc-600 leading-relaxed">{pricingCurrencyFootnote}</p>
         </header>
 
         <SubscriptionFlow />

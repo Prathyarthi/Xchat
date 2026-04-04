@@ -22,9 +22,6 @@ export interface SubscriptionMeData {
 
 async function fetchSubscriptionMe(): Promise<SubscriptionMeData> {
   const res = await fetch('/api/subscriptions/me', { credentials: 'include' })
-  if (res.status === 401) {
-    return { subscription: null, razorpayReady: false }
-  }
   if (!res.ok) {
     throw new Error('Failed to load subscription')
   }

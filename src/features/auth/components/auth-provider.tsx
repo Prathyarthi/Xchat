@@ -1,6 +1,7 @@
 'use client'
 
 import { SessionProvider, useSession, signOut } from 'next-auth/react'
+import type { Session } from 'next-auth'
 import { ReactNode } from 'react'
 
 export interface AuthUser {
@@ -22,6 +23,12 @@ export function useAuth() {
   }
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  return <SessionProvider>{children}</SessionProvider>
+export function AuthProvider({
+  children,
+  session,
+}: {
+  children: ReactNode
+  session: Session | null
+}) {
+  return <SessionProvider session={session ?? undefined}>{children}</SessionProvider>
 }

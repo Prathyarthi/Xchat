@@ -126,6 +126,16 @@ export default function ProfilePage() {
 
                 <Separator className="bg-white/[0.06]" />
 
+                <Link
+                  href="/billing"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm text-zinc-300 hover:bg-white/[0.05] hover:border-white/[0.12] transition-colors"
+                >
+                  <span>Billing & subscription</span>
+                  <span className="text-zinc-600" aria-hidden>
+                    →
+                  </span>
+                </Link>
+
                 <div className="grid grid-cols-2 gap-3 text-center">
                   <div>
                     <p className="text-xl font-bold gradient-text">{conversations.length}</p>

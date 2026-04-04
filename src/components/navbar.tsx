@@ -6,7 +6,6 @@ import { useAuth } from '@/features/auth/components/auth-provider'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { TrackedLink } from '@/components/analytics/tracked-link'
-import { NavbarSubscribe } from '@/components/navbar-subscribe'
 
 export function Navbar() {
   const { user, logout, loading } = useAuth()
@@ -14,14 +13,14 @@ export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const navLinks = [
-    { href: '/pricing', label: 'Pricing' },
     { href: '/explore', label: 'Explore' },
-    { href: '/agents/create', label: 'Create Agent' },
-    ...(user ? [
-      { href: '/dashboard', label: 'Dashboard' },
-      { href: '/journal', label: 'Journal' },
-      { href: '/billing', label: 'Billing' },
-    ] : []),
+    { href: '/pricing', label: 'Subscribe' },
+    ...(user
+      ? [
+          { href: '/dashboard', label: 'Dashboard' },
+          { href: '/journal', label: 'Journal' },
+        ]
+      : []),
   ]
 
   return (
@@ -55,7 +54,6 @@ export function Navbar() {
             <div className="w-20 h-8 rounded-full bg-white/5 animate-pulse" />
           ) : user ? (
             <>
-              <NavbarSubscribe />
               <Link href="/profile" className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200">
                 <span className="w-8 h-8 rounded-full bg-zinc-800 border border-white/8 flex items-center justify-center text-sm font-bold">
                   {user.avatar || user.name[0].toUpperCase()}
@@ -93,7 +91,6 @@ export function Navbar() {
 
       {menuOpen && (
         <div className="md:hidden glass border-t border-white/6 px-4 py-4 flex flex-col gap-3">
-          {user && <NavbarSubscribe variant="menu" />}
           {navLinks.map(link => (
             <Link
               key={link.href}
