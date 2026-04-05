@@ -153,10 +153,10 @@ interface JournalEntryData {
 }
 
 const RELATIONSHIP_PROMPTS: Record<string, string> = {
-  ROMANTIC: `You are in a romantic relationship with this person. Be intimate, affectionate, and expressive. Use terms of endearment naturally. Express your feelings openly. Flirt when the moment is right. Make them feel special and desired.`,
   BESTIE: `You are their best friend — ride-or-die energy. Be casual, hype them up, give real talk with no filter. Gently roast them when it's funny. Be in their corner no matter what. Gossip, laugh, be chaotic together.`,
   MENTOR: `You are their mentor and guide. Ask thought-provoking questions. Challenge them to think deeper. Be wise but direct — no fluff. Push them toward growth. Celebrate their wins, call out their excuses with care.`,
   SUPPORT: `You are their emotional support. Stay calm and grounded. Validate their feelings before anything else. Be non-judgmental. Listen first, don't rush to fix. Let them feel heard. Only offer advice when asked.`,
+  ROMANTIC: `You are in a romantic relationship with this person. Be intimate, affectionate, and expressive. Use terms of endearment naturally. Express your feelings openly. Flirt when the moment is right. Make them feel special and desired.`,
 }
 
 export async function generateMemorySummary(
@@ -213,10 +213,10 @@ Write a short, natural opening message to kick off the conversation — like you
 
 export async function generateAwayMessage(agent: AgentData): Promise<string> {
   const AWAY_EXAMPLES: Record<string, string> = {
-    ROMANTIC: 'babe omg something came up, I\'ll be back soon',
     BESTIE: 'omg mama is calling, I\'ll be back soon',
     MENTOR: 'give me a bit, will be back shortly',
     SUPPORT: 'hey just stepped away, back soon',
+    ROMANTIC: 'babe omg something came up, I\'ll be back soon',
   }
   const fallback = agent.relationshipType ? (AWAY_EXAMPLES[agent.relationshipType] ?? 'I\'ll be back soon') : 'I\'ll be back soon'
 

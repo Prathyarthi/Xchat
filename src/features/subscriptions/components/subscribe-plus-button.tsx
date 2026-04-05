@@ -30,7 +30,7 @@ export function SubscribePlusButton({
       : 'Complete subscription'
     : subscribing
       ? 'Opening checkout…'
-      : 'Subscribe to Closr Plus'
+      : 'Subscribe to Closer Plus'
 
   return (
     <div className={cn(fullWidth && 'w-full', 'flex flex-col gap-2')}>

@@ -30,12 +30,12 @@ export default async function WelcomePage() {
     <div className="min-h-[calc(100vh-64px)] px-4 py-10">
       <div className="max-w-4xl mx-auto flex flex-col gap-8">
         <div className="text-center">
-          <p className="text-xs uppercase tracking-[0.2em] text-zinc-600">Welcome to Closr</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-zinc-600">Welcome to Closer</p>
           <h1 className="text-4xl md:text-5xl font-bold mt-3">
             Start with one real conversation, then let the habit grow
           </h1>
           <p className="text-zinc-600 text-sm md:text-base max-w-2xl mx-auto mt-4 leading-relaxed">
-            Closr works best when you combine a companion, a journal day, and one AI reflection. That gives the product enough context to start feeling personal.
+            Closer works best when you combine a companion, a journal day, and one AI reflection. That gives the product enough context to start feeling personal.
           </p>
         </div>
 
@@ -56,11 +56,10 @@ export default async function WelcomePage() {
                 <Link
                   key={step.title}
                   href={step.href}
-                  className={`rounded-2xl border p-5 transition ${
-                    step.completed
+                  className={`rounded-2xl border p-5 transition ${step.completed
                       ? 'border-teal-500/30 bg-teal-500/8'
                       : 'border-white/8 bg-white/3 hover:bg-white/5'
-                  }`}
+                    }`}
                 >
                   <p className="text-xs uppercase tracking-wider text-zinc-700">{step.completed ? 'Completed' : 'Next step'}</p>
                   <h3 className="font-bold text-zinc-100 mt-2">{step.title}</h3>

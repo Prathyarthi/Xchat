@@ -36,8 +36,8 @@ export function useSubscribePlus() {
       const options: Record<string, unknown> = {
         key: razorpayKey,
         subscription_id: razorpaySubscriptionId,
-        name: 'Closr',
-        description: 'Closr Plus — monthly',
+        name: 'Closer',
+        description: 'Closer Plus — monthly',
         handler: async (response: RazorpayResponse) => {
           const verifyRes = await fetch('/api/subscriptions/verify', {
             method: 'POST',

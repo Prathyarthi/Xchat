@@ -24,7 +24,7 @@ export function DashboardSubscribeCta() {
   return (
     <div className="rounded-2xl border border-teal-500/20 bg-teal-500/[0.06] px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <p className="text-xs uppercase tracking-wider text-teal-400/90">Closr Plus</p>
+        <p className="text-xs uppercase tracking-wider text-teal-400/90">Closer Plus</p>
         <p className="text-sm font-semibold text-zinc-100 mt-1">
           {plusPending ? 'Finish checkout to activate your subscription' : 'Take a subscription for higher limits and proactive check-ins'}
         </p>

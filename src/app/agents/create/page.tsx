@@ -16,14 +16,6 @@ const TONES = ['Romantic', 'Friendly', 'Intellectual', 'Mysterious', 'Playful', 
 
 const RELATIONSHIP_TYPES = [
   {
-    value: 'ROMANTIC',
-    emoji: '💕',
-    label: 'Romantic',
-    description: 'A loving partner who\'s intimate, caring, and expressive',
-    color: 'border-pink-500/40 bg-pink-500/10 hover:border-pink-400/60',
-    activeColor: 'border-pink-400 bg-pink-500/20',
-  },
-  {
     value: 'BESTIE',
     emoji: '🤝',
     label: 'Bestie',
@@ -46,6 +38,14 @@ const RELATIONSHIP_TYPES = [
     description: 'A calm presence who listens and never judges',
     color: 'border-teal-500/40 bg-teal-500/10 hover:border-teal-400/60',
     activeColor: 'border-teal-400 bg-teal-500/20',
+  },
+  {
+    value: 'ROMANTIC',
+    emoji: '💕',
+    label: 'Romantic',
+    description: 'A loving partner who\'s intimate, caring, and expressive',
+    color: 'border-pink-500/40 bg-pink-500/10 hover:border-pink-400/60',
+    activeColor: 'border-pink-400 bg-pink-500/20',
   },
 ]
 
@@ -106,11 +106,10 @@ export default function CreateAgentPage() {
         <div className="flex items-center gap-2 mb-6 justify-center">
           {[1, 2, 3, 4].map(s => (
             <div key={s} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                step === s ? 'bg-zinc-200 text-zinc-900'
-                : step > s ? 'bg-white/8 text-zinc-400'
-                : 'bg-white/3 border border-white/8 text-zinc-600'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${step === s ? 'bg-zinc-200 text-zinc-900'
+                  : step > s ? 'bg-white/8 text-zinc-400'
+                    : 'bg-white/3 border border-white/8 text-zinc-600'
+                }`}>
                 {step > s ? '✓' : s}
               </div>
               {s < 4 && <div className={`w-12 h-px ${step > s ? 'bg-white/20' : 'bg-white/6'}`} />}
@@ -133,9 +132,8 @@ export default function CreateAgentPage() {
                       key={rt.value}
                       type="button"
                       onClick={() => setForm(f => ({ ...f, relationshipType: rt.value }))}
-                      className={`flex items-center gap-4 p-4 rounded-2xl border text-left transition-all ${
-                        form.relationshipType === rt.value ? rt.activeColor : rt.color
-                      }`}
+                      className={`flex items-center gap-4 p-4 rounded-2xl border text-left transition-all ${form.relationshipType === rt.value ? rt.activeColor : rt.color
+                        }`}
                     >
                       <span className="text-3xl">{rt.emoji}</span>
                       <div>

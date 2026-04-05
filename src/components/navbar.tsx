@@ -17,10 +17,10 @@ export function Navbar() {
     { href: '/pricing', label: 'Subscribe' },
     ...(user
       ? [
-          { href: '/dashboard', label: 'Dashboard' },
-          { href: '/journal', label: 'Journal' },
-          ...(user.role === 'ADMIN' ? [{ href: '/analytics', label: 'Analytics' }] : []),
-        ]
+        { href: '/dashboard', label: 'Dashboard' },
+        { href: '/journal', label: 'Journal' },
+        ...(user.role === 'ADMIN' ? [{ href: '/analytics', label: 'Analytics' }] : []),
+      ]
       : []),
   ]
 
@@ -28,7 +28,7 @@ export function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/6">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <span className="text-xl font-bold gradient-text tracking-wider">Closr</span>
+          <span className="text-xl font-bold gradient-text tracking-wider">Closer</span>
           <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-zinc-400 border border-white/8">
             AI
           </span>
@@ -39,11 +39,10 @@ export function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`text-sm ${
-                pathname.startsWith(link.href)
+              className={`text-sm ${pathname.startsWith(link.href)
                   ? 'text-zinc-200 font-medium'
                   : 'text-zinc-500 hover:text-zinc-300'
-              }`}
+                }`}
             >
               {link.label}
             </Link>

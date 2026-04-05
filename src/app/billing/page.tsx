@@ -25,7 +25,7 @@ export default async function BillingPage() {
       <div className="max-w-lg mx-auto flex flex-col gap-6">
         <div>
           <h1 className="text-3xl font-bold text-zinc-50">Billing</h1>
-          <p className="text-sm text-zinc-500 mt-1">Closr Plus is billed through Razorpay.</p>
+          <p className="text-sm text-zinc-500 mt-1">Closer Plus is billed through Razorpay.</p>
         </div>
 
         <Card className="rounded-3xl border-white/[0.08]">
@@ -47,7 +47,7 @@ export default async function BillingPage() {
               <dl className="text-sm space-y-2 text-zinc-500">
                 <div className="flex justify-between gap-4">
                   <dt>Plan</dt>
-                  <dd className="text-zinc-300">{subscription.planSlug === 'plus' ? 'Closr Plus' : subscription.planSlug}</dd>
+                  <dd className="text-zinc-300">{subscription.planSlug === 'plus' ? 'Closer Plus' : subscription.planSlug}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt>Current period</dt>

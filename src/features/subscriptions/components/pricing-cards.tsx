@@ -43,11 +43,10 @@ export function PricingCards({
               </div>
             )}
             <Card
-              className={`h-full rounded-2xl md:rounded-3xl ${
-                plan.highlight
+              className={`h-full rounded-2xl md:rounded-3xl ${plan.highlight
                   ? 'border-teal-500/25 bg-gradient-to-b from-teal-500/[0.06] to-transparent shadow-[0_0_0_1px_rgba(45,212,191,0.12)]'
                   : 'border-white/[0.08]'
-              }`}
+                }`}
             >
               <CardContent className="p-6 md:p-8 flex flex-col gap-6 h-full">
                 <div>
@@ -138,7 +137,7 @@ export function PricingCards({
                     disabled={subscribing}
                     onClick={onSubscribePlus}
                   >
-                    {subscribing ? 'Opening checkout…' : 'Subscribe to Closr Plus'}
+                    {subscribing ? 'Opening checkout…' : 'Subscribe to Closer Plus'}
                   </Button>
                 )}
 
@@ -149,7 +148,7 @@ export function PricingCards({
                     className="rounded-full w-full mt-auto border-white/10 text-zinc-500"
                     disabled
                   >
-                    Subscribe to Closr Plus
+                    Subscribe to Closer Plus
                   </Button>
                 )}
 

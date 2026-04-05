@@ -14,7 +14,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Closr — AI Companions',
+  title: 'Closer — AI Companions',
   description: 'Find your perfect AI companion. Meaningful conversations, emotional intelligence, and genuine connection.',
 }
 
@@ -22,8 +22,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const session = await getServerSession(authOptions)
 
   return (
-    <html lang="en">
-      <body className={`${jetbrainsMono.variable} antialiased`}>
+    <html lang="en" className={jetbrainsMono.variable}>
+      <body className="antialiased" suppressHydrationWarning>
         <AuthProvider session={session}>
           <Providers>
             <PageViewTracker />

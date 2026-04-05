@@ -7,7 +7,7 @@ export const FREE_PLAN_LIMITS = {
   monthlyJournalEntries: 100,
 } as const
 
-/** Practical “unlimited” for Closr Plus (Razorpay-backed). */
+/** Practical “unlimited” for Closer Plus (Razorpay-backed). */
 export const PLUS_PLAN_LIMITS = {
   companions: 1_000_000,
   monthlyMessages: 1_000_000,

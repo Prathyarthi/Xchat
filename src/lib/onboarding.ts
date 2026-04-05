@@ -30,7 +30,7 @@ export function buildActivationSteps(stats: ActivationStats): ActivationStep[] {
     },
     {
       title: 'Write a journal entry',
-      description: 'Give Closr one day of context to reflect on.',
+      description: 'Give Closer one day of context to reflect on.',
       href: '/journal',
       completed: stats.journalDayCount > 0,
     },
@@ -56,7 +56,7 @@ export function getLifecycleNudge(stats: ActivationStats) {
   if (stats.journalDayCount === 0) {
     return {
       title: 'Add your first day of context',
-      body: 'The journal is where Closr becomes more than chat and starts helping you process real life.',
+      body: 'The journal is where Closer becomes more than chat and starts helping you process real life.',
       href: '/journal',
       cta: 'Open journal',
     }

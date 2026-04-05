@@ -60,7 +60,7 @@ export const subscriptions = new Elysia({ prefix: '/subscriptions' })
       const existing = await prisma.subscription.findUnique({ where: { userId: user.id } })
       if (existing?.status === 'ACTIVE' && existing.planSlug === 'plus') {
         ctx.set.status = 409
-        return { error: 'You already have an active Closr Plus subscription.' }
+        return { error: 'You already have an active Closer Plus subscription.' }
       }
 
       let customerId = user.razorpayCustomerId

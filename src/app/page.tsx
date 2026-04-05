@@ -23,7 +23,7 @@ async function getFeaturedAgents(userId?: string) {
 }
 
 const FEATURES = [
-  { icon: '🧠', title: 'Memory That Builds', desc: 'Closr keeps context between conversations so the relationship feels cumulative instead of disposable.' },
+  { icon: '🧠', title: 'Memory That Builds', desc: 'Closer keeps context between conversations so the relationship feels cumulative instead of disposable.' },
   { icon: '🫶', title: 'Emotion-Aware Replies', desc: 'Messages can respond to mood and relationship style, making support feel more personal.' },
   { icon: '🗓️', title: 'Daily Reflection Loop', desc: 'Journal days and AI reflections turn private thoughts into an everyday habit.' },
   { icon: '📨', title: 'Follow-Up Energy', desc: 'Scheduled messages and check-ins create a sense of continuity that most chat apps never reach.' },
@@ -86,7 +86,7 @@ export default async function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-extrabold mb-3">
-              Why <span className="gradient-text">Closr</span>?
+              Why <span className="gradient-text">Closer</span>?
             </h2>
             <p className="text-zinc-600 text-sm max-w-sm mx-auto">
               Built for people who want more than a chatbot: private support, daily reflection, and a companion that stays coherent over time.
@@ -234,7 +234,7 @@ export default async function LandingPage() {
                 Ready to build your <span className="gradient-text">daily support loop</span>?
               </h2>
               <p className="text-zinc-600 text-sm mb-8 leading-relaxed">
-                Start with one companion, one conversation, and one journal day. That is enough to feel what makes Closr different.
+                Start with one companion, one conversation, and one journal day. That is enough to feel what makes Closer different.
               </p>
               <Button asChild size="lg" className="rounded-full px-10">
                 <TrackedLink href="/sign-up" eventName="sign_up_cta_clicked" eventProperties={{ source: 'footer_cta' }}>
@@ -247,7 +247,7 @@ export default async function LandingPage() {
       </section>
 
       <footer className="border-t border-white/6 px-6 py-8 text-center">
-        <div className="gradient-text text-sm font-bold mb-1">Closr</div>
+        <div className="gradient-text text-sm font-bold mb-1">Closer</div>
         <div className="text-xs text-zinc-700">Private AI companionship with memory, reflection, and emotional continuity.</div>
         <div className="flex justify-center gap-4 mt-4 text-xs text-zinc-600">
           <Link href="/pricing">Subscribe</Link>

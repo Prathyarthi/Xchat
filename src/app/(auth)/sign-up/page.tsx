@@ -39,8 +39,8 @@ export default function SignUpPage() {
       <div className="w-full max-w-sm animate-fade-up">
         <Card className="rounded-2xl px-2">
           <CardHeader className="text-center pb-0">
-            <Link href="/" className="gradient-text font-bold text-2xl tracking-wider">Closr</Link>
-            <h1 className="text-xl font-bold text-zinc-100 mt-3 mb-1">Join Closr</h1>
+            <Link href="/" className="gradient-text font-bold text-2xl tracking-wider">Closer</Link>
+            <h1 className="text-xl font-bold text-zinc-100 mt-3 mb-1">Join Closer</h1>
             <p className="text-zinc-600 text-sm">Create your account to start a private companion and reflection habit</p>
           </CardHeader>
           <CardContent>
@@ -53,11 +53,10 @@ export default function SignUpPage() {
                       key={emoji}
                       type="button"
                       onClick={() => setForm(f => ({ ...f, avatar: emoji }))}
-                      className={`h-10 rounded-xl text-xl ${
-                        form.avatar === emoji
+                      className={`h-10 rounded-xl text-xl ${form.avatar === emoji
                           ? 'bg-white/[0.1] border border-white/25'
                           : 'bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.07]'
-                      }`}
+                        }`}
                     >
                       {emoji}
                     </button>

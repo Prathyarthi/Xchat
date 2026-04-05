@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 
 export const metadata: Metadata = {
-  title: 'Analytics — Closr',
+  title: 'Analytics — Closer',
   robots: { index: false, follow: false },
 }
 

@@ -11,10 +11,10 @@ import { pricingPlans } from '@/lib/pricing'
 import { DashboardSubscribeCta } from '@/features/subscriptions/components/dashboard-subscribe-cta'
 
 const RELATIONSHIP_BADGES: Record<string, { label: string; className: string }> = {
+  BESTIE: { label: '🤝 Bestie', className: 'border-blue-500/40 text-blue-400 bg-blue-500/10' },
+  MENTOR: { label: '🧠 Mentor', className: 'border-amber-500/40 text-amber-400 bg-amber-500/10' },
+  SUPPORT: { label: '🫂 Support', className: 'border-teal-500/40 text-teal-400 bg-teal-500/10' },
   ROMANTIC: { label: '💕 Romantic', className: 'border-pink-500/40 text-pink-400 bg-pink-500/10' },
-  BESTIE:   { label: '🤝 Bestie',   className: 'border-blue-500/40 text-blue-400 bg-blue-500/10' },
-  MENTOR:   { label: '🧠 Mentor',   className: 'border-amber-500/40 text-amber-400 bg-amber-500/10' },
-  SUPPORT:  { label: '🫂 Support',  className: 'border-teal-500/40 text-teal-400 bg-teal-500/10' },
 }
 
 function timeAgo(date: Date): string {
@@ -127,11 +127,10 @@ export default async function DashboardPage() {
                   <Link
                     key={step.title}
                     href={step.href}
-                    className={`rounded-2xl border p-4 transition ${
-                      step.completed
+                    className={`rounded-2xl border p-4 transition ${step.completed
                         ? 'border-teal-500/30 bg-teal-500/8'
                         : 'border-white/8 bg-white/3 hover:bg-white/5'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <p className="font-semibold text-sm text-zinc-100">{step.title}</p>
@@ -223,7 +222,7 @@ export default async function DashboardPage() {
             <Card className="rounded-3xl border-teal-500/20 bg-teal-500/[0.04]">
               <CardContent className="p-6 md:p-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-teal-500/80">Closr Plus</p>
+                  <p className="text-[10px] uppercase tracking-wider text-teal-500/80">Closer Plus</p>
                   <h2 className="text-xl font-bold text-zinc-100 mt-2">You have full continuity unlocked</h2>
                   <p className="text-sm text-zinc-500 mt-1">
                     Higher limits and proactive features are active on your account.
@@ -308,7 +307,7 @@ export default async function DashboardPage() {
               {unchattedAgents.map(agent => {
                 const badge = (agent as any).relationshipType ? RELATIONSHIP_BADGES[(agent as any).relationshipType] : null
                 let personality: any = {}
-                try { personality = JSON.parse((agent as any).personality || '{}') } catch {}
+                try { personality = JSON.parse((agent as any).personality || '{}') } catch { }
                 return (
                   <Card key={agent.id} className="rounded-3xl">
                     <CardContent className="p-5 flex flex-col gap-3">

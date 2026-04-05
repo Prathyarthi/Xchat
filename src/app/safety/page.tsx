@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 
 const guardrails = [
-  'Closr is for companionship and reflection, not crisis response or therapy.',
+  'Closer is for companionship and reflection, not crisis response or therapy.',
   'If a user is in immediate danger, they should contact local emergency services or a crisis hotline.',
   'Companion personas should avoid encouraging dependency, self-harm, abuse, or isolation from real-world support systems.',
   'The product should frame emotional awareness as support, not as a claim of clinical accuracy.',
@@ -15,7 +15,7 @@ export default function SafetyPage() {
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-600">Safety</p>
           <h1 className="text-4xl font-bold mt-3">Safety and support framing</h1>
           <p className="text-sm text-zinc-600 mt-4 leading-relaxed">
-            Because Closr sits near emotional support, trust and safety framing should be visible in the product, not hidden until later.
+            Because Closer sits near emotional support, trust and safety framing should be visible in the product, not hidden until later.
           </p>
         </div>
 
