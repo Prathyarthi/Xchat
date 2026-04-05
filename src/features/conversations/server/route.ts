@@ -442,8 +442,8 @@ export const conversations = new Elysia({ prefix: '/conversations' })
         )
       } catch (err) {
         console.error('[AI Error]', err)
-        // On any AI failure, ghost the agent for 5–10 mins and show a brb message
-        const errorAwayMinutes = Math.floor(Math.random() * 6) + 5
+        // On any AI failure (incl. quota), ghost long enough that limits may reset; show a brb message
+        const errorAwayMinutes = 30
         const errorAwayUntil = new Date(Date.now() + errorAwayMinutes * 60 * 1000)
         await prisma.conversation.update({
           where: { id: conversationId },

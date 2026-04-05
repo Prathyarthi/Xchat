@@ -3,6 +3,7 @@
 import Link, { type LinkProps } from 'next/link'
 import type { ReactNode } from 'react'
 import { trackClientEvent } from '@/features/analytics/lib/client'
+import { cn } from '@/lib/utils'
 
 interface TrackedLinkProps extends LinkProps {
   children: ReactNode
@@ -21,7 +22,7 @@ export function TrackedLink({
   return (
     <Link
       {...props}
-      className={className}
+      className={cn('cursor-pointer', className)}
       onClick={() => {
         if (!eventName) return
         trackClientEvent({

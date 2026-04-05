@@ -8,12 +8,13 @@ export const analytics = new Elysia({ prefix: '/analytics' })
     async (ctx) => {
       const session = await getSession(ctx.request)
 
-      await trackEvent({
+      // Do not await DB: client analytics should not pay Neon RTT on every click/view.
+      void trackEvent({
         name: ctx.body.name,
         userId: session?.userId ?? null,
         path: ctx.body.path ?? null,
         properties: ctx.body.properties ?? {},
-      })
+      }).catch(err => console.error('[analytics track]', err))
 
       return { ok: true }
     },
