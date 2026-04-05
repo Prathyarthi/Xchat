@@ -120,7 +120,7 @@ export default async function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {featuredAgents.map((agent: any) => {
                 let personality: any = {}
-                try { personality = JSON.parse(agent.personality || '{}') } catch {}
+                try { personality = JSON.parse(agent.personality || '{}') } catch { }
                 const interests: string[] = agent.interests?.length ? agent.interests : []
                 const tone = personality.tone || ''
 
