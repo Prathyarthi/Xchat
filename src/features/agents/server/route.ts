@@ -3,25 +3,37 @@ import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { trackEvent } from '@/features/analytics/lib/server'
 import { getFreeCompanionUsage } from '@/features/pricing/lib/limits'
+import { userCanUseAgent } from '@/lib/agent-access'
 
 export const agents = new Elysia({ prefix: '/agents' })
   .get('/', async (ctx) => {
     const session = await getSession(ctx.request)
     if (!session) { ctx.set.status = 401; return { error: 'Not authenticated' } }
 
-    const agentList = await prisma.agent.findMany({
-      where: { creatorId: session.userId },
-      orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { conversations: true } } },
-    })
-    return { agents: agentList }
+    const [builtIn, mine] = await Promise.all([
+      prisma.agent.findMany({
+        where: { creatorId: null },
+        orderBy: { createdAt: 'asc' },
+        include: { _count: { select: { conversations: true } } },
+      }),
+      prisma.agent.findMany({
+        where: { creatorId: session.userId },
+        orderBy: { createdAt: 'desc' },
+        include: { _count: { select: { conversations: true } } },
+      }),
+    ])
+
+    return { agents: [...builtIn, ...mine] }
   })
   .get('/:id', async (ctx) => {
     const session = await getSession(ctx.request)
     if (!session) { ctx.set.status = 401; return { error: 'Not authenticated' } }
 
     const agent = await prisma.agent.findFirst({
-      where: { id: ctx.params.id, creatorId: session.userId },
+      where: {
+        id: ctx.params.id,
+        OR: [{ creatorId: null }, { creatorId: session.userId }],
+      },
       include: { _count: { select: { conversations: true } } },
     })
     if (!agent) {

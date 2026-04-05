@@ -19,7 +19,10 @@ export default async function AgentProfilePage({ params }: { params: Promise<{ i
   if (!session?.user) redirect('/sign-in')
 
   const agent = await prisma.agent.findFirst({
-    where: { id, creatorId: session.user.id as string },
+    where: {
+      id,
+      OR: [{ creatorId: null }, { creatorId: session.user.id as string }],
+    },
   })
 
   if (!agent) notFound()

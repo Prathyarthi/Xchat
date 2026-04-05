@@ -35,7 +35,7 @@ export const pricingPlans: PricingPlan[] = [
     features: [
       { label: '2 private companions', included: true },
       { label: '50 messages per month', included: true },
-      { label: '200 journal entries per month', included: true },
+      { label: '100 journal entries per month', included: true },
       { label: 'Limited AI reflections', included: true },
       { label: 'Short memory window', included: true },
       { label: 'Proactive check-ins', included: false },

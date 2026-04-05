@@ -5,6 +5,7 @@ import { getSession } from '@/lib/session'
 import { detectEmotion } from '@/lib/emotion'
 import { trackEvent } from '@/features/analytics/lib/server'
 import { getFreeMessageUsage } from '@/features/pricing/lib/limits'
+import { userCanUseAgent } from '@/lib/agent-access'
 
 const GHOST_PROBABILITY: Record<string, number> = {
   ROMANTIC: 0.05,
@@ -22,7 +23,10 @@ export const conversations = new Elysia({ prefix: '/conversations' })
 
       const { agentId } = ctx.body
       const agent = await prisma.agent.findFirst({
-        where: { id: agentId, creatorId: session.userId },
+        where: {
+          id: agentId,
+          OR: [{ creatorId: null }, { creatorId: session.userId }],
+        },
       })
       if (!agent) { ctx.set.status = 404; return { error: 'Agent not found' } }
 
@@ -63,7 +67,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
       },
     })
 
-    if (!conversation || conversation.userId !== session.userId || conversation.agent.creatorId !== session.userId) {
+    if (!conversation || conversation.userId !== session.userId || !userCanUseAgent(conversation.agent, session.userId)) {
       ctx.set.status = 404
       return { error: 'Conversation not found' }
     }
@@ -184,7 +188,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
         include: { agent: true },
       })
 
-      if (!conversation || conversation.userId !== session.userId || conversation.agent.creatorId !== session.userId) {
+      if (!conversation || conversation.userId !== session.userId || !userCanUseAgent(conversation.agent, session.userId)) {
         ctx.set.status = 404
         return { error: 'Conversation not found' }
       }
