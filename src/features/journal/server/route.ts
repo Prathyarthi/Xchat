@@ -4,7 +4,7 @@ import { getSession } from '@/lib/session'
 import { detectEmotion } from '@/lib/emotion'
 import { generateJournalDaySummary, generateJournalReflection } from '@/lib/ai'
 import { trackEvent } from '@/features/analytics/lib/server'
-import { getFreeJournalUsage } from '@/features/pricing/lib/limits'
+import { getFreeJournalAiUsage, getFreeJournalUsage } from '@/features/pricing/lib/limits'
 
 function parseDateKey(value: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
@@ -77,7 +77,7 @@ export const journal = new Elysia({ prefix: '/journal' })
         return { error: 'Invalid month. Use YYYY-MM.' }
       }
 
-      const [days, journalUsage] = await Promise.all([
+      const [days, journalUsage, journalAiUsage] = await Promise.all([
         prisma.journalDay.findMany({
           where: {
             userId: session.userId,
@@ -92,6 +92,7 @@ export const journal = new Elysia({ prefix: '/journal' })
           },
         }),
         getFreeJournalUsage(session.userId),
+        getFreeJournalAiUsage(session.userId),
       ])
 
       return {
@@ -105,6 +106,7 @@ export const journal = new Elysia({ prefix: '/journal' })
           updatedAt: day.updatedAt,
         })),
         journalUsage,
+        journalAiUsage,
       }
     },
     {
@@ -123,9 +125,10 @@ export const journal = new Elysia({ prefix: '/journal' })
       return { error: 'Invalid date. Use YYYY-MM-DD.' }
     }
 
-    const [day, journalUsage] = await Promise.all([
+    const [day, journalUsage, journalAiUsage] = await Promise.all([
       getSerializedJournalDay(session.userId, date),
       getFreeJournalUsage(session.userId),
+      getFreeJournalAiUsage(session.userId),
     ])
 
     return {
@@ -138,6 +141,7 @@ export const journal = new Elysia({ prefix: '/journal' })
         updatedAt: null,
       },
       journalUsage,
+      journalAiUsage,
     }
   })
   .post(
@@ -262,6 +266,18 @@ export const journal = new Elysia({ prefix: '/journal' })
         return { error: 'No journal entries found for this day yet.' }
       }
 
+      const journalAiUsage = await getFreeJournalAiUsage(session.userId)
+      if (journalAiUsage.remaining <= 0) {
+        ctx.set.status = 403
+        return {
+          code: 'FREE_JOURNAL_AI_LIMIT_REACHED',
+          error:
+            'You have used your free AI reflections and summaries for this month. Upgrade to Closer Plus for unlimited.',
+          journalAiUsage,
+          upgradeUrl: '/pricing',
+        }
+      }
+
       try {
         await trackEvent({
           name: ctx.body.action === 'reflect' ? 'journal_reflection_requested' : 'journal_summary_requested',
@@ -301,7 +317,13 @@ export const journal = new Elysia({ prefix: '/journal' })
           },
         })
 
-        return { action: ctx.body.action, output }
+        const nextAiUsage = {
+          ...journalAiUsage,
+          used: journalAiUsage.used + 1,
+          remaining: Math.max(0, journalAiUsage.remaining - 1),
+        }
+
+        return { action: ctx.body.action, output, journalAiUsage: nextAiUsage }
       } catch (error) {
         console.error('[Journal AI Action Error]', error)
         ctx.set.status = 502

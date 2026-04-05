@@ -7,6 +7,28 @@ import { trackEvent } from '@/features/analytics/lib/server'
 import { getFreeMessageUsage } from '@/features/pricing/lib/limits'
 import { userCanUseAgent } from '@/lib/agent-access'
 
+/** Recent page size for chat; older rows load via `?beforeMessageId=`. */
+const CHAT_MESSAGES_PAGE_SIZE = 50
+
+function serializeMessagesForClient(
+  messages: Array<{
+    id: string
+    senderType: string
+    senderId: string
+    content: string
+    emotion: string | null
+    createdAt: Date
+  }>
+) {
+  return messages.map(m => ({
+    id: m.id,
+    senderType: m.senderType,
+    content: m.content,
+    emotion: m.emotion,
+    createdAt: m.createdAt.toISOString(),
+  }))
+}
+
 const GHOST_PROBABILITY: Record<string, number> = {
   ROMANTIC: 0.05,
   BESTIE: 0.04,
@@ -54,127 +76,208 @@ export const conversations = new Elysia({ prefix: '/conversations' })
     },
     { body: t.Object({ agentId: t.String() }) }
   )
-  .get('/:id/messages', async (ctx) => {
-    const session = await getSession(ctx.request)
-    if (!session) { ctx.set.status = 401; return { error: 'Not authenticated' } }
+  .get(
+    '/:id/messages',
+    async (ctx) => {
+      const session = await getSession(ctx.request)
+      if (!session) { ctx.set.status = 401; return { error: 'Not authenticated' } }
 
-    const conversation = await prisma.conversation.findUnique({
-      where: { id: ctx.params.id },
-      include: {
-        agent: true,
-        messages: { orderBy: { createdAt: 'asc' } },
-        user: { select: { name: true } },
-      },
-    })
+      const beforeMessageId = ctx.query.beforeMessageId?.trim()
 
-    if (!conversation || conversation.userId !== session.userId || !userCanUseAgent(conversation.agent, session.userId)) {
-      ctx.set.status = 404
-      return { error: 'Conversation not found' }
-    }
-
-    const now = new Date()
-    const messageUsage = await getFreeMessageUsage(session.userId)
-
-    // Agent sends first message if conversation is empty
-    if (conversation.messages.length === 0) {
-      try {
-        const openingContent = await generateOpeningMessage(
-          conversation.agent as any,
-          conversation.user?.name ?? undefined
-        )
-        await prisma.message.create({
-          data: {
-            conversationId: ctx.params.id,
-            senderType: 'AGENT',
-            senderId: conversation.agentId,
-            content: openingContent,
-            emotion: 'neutral',
-          },
+      if (beforeMessageId) {
+        const conversation = await prisma.conversation.findFirst({
+          where: { id: ctx.params.id, userId: session.userId },
+          include: { agent: true },
         })
-      } catch (err) {
-        console.error('[Opening message error]', err)
-      }
-    }
+        if (!conversation || !userCanUseAgent(conversation.agent, session.userId)) {
+          ctx.set.status = 404
+          return { error: 'Conversation not found' }
+        }
 
-    // Agent comeback detection
-    if (conversation.agentAvailableAt && conversation.agentAvailableAt <= now) {
-      const updated = await prisma.conversation.updateMany({
+        const cursor = await prisma.message.findFirst({
+          where: { id: beforeMessageId, conversationId: ctx.params.id },
+        })
+        if (!cursor) {
+          ctx.set.status = 400
+          return { error: 'Invalid message cursor' }
+        }
+
+        const batch = await prisma.message.findMany({
+          where: {
+            conversationId: ctx.params.id,
+            createdAt: { lt: cursor.createdAt },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: CHAT_MESSAGES_PAGE_SIZE + 1,
+        })
+        const hasMore = batch.length > CHAT_MESSAGES_PAGE_SIZE
+        const slice = hasMore ? batch.slice(0, CHAT_MESSAGES_PAGE_SIZE) : batch
+        const olderAsc = [...slice].reverse()
+
+        return {
+          messages: serializeMessagesForClient(olderAsc),
+          hasMore,
+        }
+      }
+
+      const [conversation, messageUsage] = await Promise.all([
+        prisma.conversation.findUnique({
+          where: { id: ctx.params.id },
+          include: {
+            agent: true,
+            messages: {
+              orderBy: { createdAt: 'desc' },
+              take: CHAT_MESSAGES_PAGE_SIZE + 1,
+            },
+            user: { select: { name: true } },
+          },
+        }),
+        getFreeMessageUsage(session.userId),
+      ])
+
+      if (!conversation || conversation.userId !== session.userId || !userCanUseAgent(conversation.agent, session.userId)) {
+        ctx.set.status = 404
+        return { error: 'Conversation not found' }
+      }
+
+      const hasMoreRecent = conversation.messages.length > CHAT_MESSAGES_PAGE_SIZE
+      const recentDesc = hasMoreRecent
+        ? conversation.messages.slice(0, CHAT_MESSAGES_PAGE_SIZE)
+        : conversation.messages
+      const messagesAsc = [...recentDesc].reverse()
+
+      const now = new Date()
+
+      // Agent sends first message if conversation is empty (no rows, or all messages outside window — treat as empty for opening)
+      if (messagesAsc.length === 0) {
+        try {
+          const openingContent = await generateOpeningMessage(
+            conversation.agent as any,
+            conversation.user?.name ?? undefined
+          )
+          await prisma.message.create({
+            data: {
+              conversationId: ctx.params.id,
+              senderType: 'AGENT',
+              senderId: conversation.agentId,
+              content: openingContent,
+              emotion: 'neutral',
+            },
+          })
+        } catch (err) {
+          console.error('[Opening message error]', err)
+        }
+      }
+
+      // Agent comeback detection
+      if (conversation.agentAvailableAt && conversation.agentAvailableAt <= now) {
+        const updated = await prisma.conversation.updateMany({
+          where: {
+            id: ctx.params.id,
+            agentAvailableAt: { not: null, lte: now },
+          },
+          data: { agentAvailableAt: null },
+        })
+
+        if (updated.count > 0) {
+          await prisma.message.create({
+            data: {
+              conversationId: ctx.params.id,
+              senderType: 'AGENT',
+              senderId: conversation.agentId,
+              content: "okay i'm back 😅 sorry about that",
+              emotion: 'neutral',
+            },
+          })
+        }
+      }
+
+      // Deliver scheduled messages
+      const dueMessages = await prisma.scheduledMessage.findMany({
         where: {
-          id: ctx.params.id,
-          agentAvailableAt: { not: null, lte: now },
+          conversationId: ctx.params.id,
+          deliveredAt: null,
+          scheduledFor: { lte: now },
         },
-        data: { agentAvailableAt: null },
+        orderBy: { scheduledFor: 'asc' },
+        take: 8,
       })
 
-      if (updated.count > 0) {
+      for (const scheduled of dueMessages) {
+        let content: string
+        try {
+          content = await generateFollowUpMessage(
+            conversation.agent as any,
+            scheduled.eventType,
+            conversation.user?.name ?? undefined,
+            (conversation as any).summary ?? undefined
+          )
+        } catch {
+          content = `hey how did the ${scheduled.eventType} go?`
+        }
+
         await prisma.message.create({
           data: {
             conversationId: ctx.params.id,
             senderType: 'AGENT',
             senderId: conversation.agentId,
-            content: "okay i'm back 😅 sorry about that",
+            content,
             emotion: 'neutral',
+            createdAt: scheduled.scheduledFor,
           },
         })
-      }
-    }
 
-    // Deliver scheduled messages
-    const dueMessages = await prisma.scheduledMessage.findMany({
-      where: {
-        conversationId: ctx.params.id,
-        deliveredAt: null,
-        scheduledFor: { lte: now },
-      },
-    })
-
-    for (const scheduled of dueMessages) {
-      let content: string
-      try {
-        content = await generateFollowUpMessage(
-          conversation.agent as any,
-          scheduled.eventType,
-          conversation.user?.name ?? undefined,
-          (conversation as any).summary ?? undefined
-        )
-      } catch {
-        content = `hey how did the ${scheduled.eventType} go?`
+        await prisma.scheduledMessage.update({
+          where: { id: scheduled.id },
+          data: { deliveredAt: now },
+        })
       }
 
-      await prisma.message.create({
-        data: {
-          conversationId: ctx.params.id,
-          senderType: 'AGENT',
-          senderId: conversation.agentId,
-          content,
-          emotion: 'neutral',
-          createdAt: scheduled.scheduledFor,
-        },
-      })
+      // Re-fetch with delivered messages
+      const [fresh, totalMessageCount] = await Promise.all([
+        prisma.conversation.findUnique({
+          where: { id: ctx.params.id },
+          include: {
+            agent: true,
+            messages: {
+              orderBy: { createdAt: 'desc' },
+              take: CHAT_MESSAGES_PAGE_SIZE + 1,
+            },
+          },
+        }),
+        prisma.message.count({ where: { conversationId: ctx.params.id } }),
+      ])
 
-      await prisma.scheduledMessage.update({
-        where: { id: scheduled.id },
-        data: { deliveredAt: now },
-      })
-    }
+      if (!fresh) {
+        ctx.set.status = 404
+        return { error: 'Conversation not found' }
+      }
 
-    // Re-fetch with delivered messages
-    const fresh = await prisma.conversation.findUnique({
-      where: { id: ctx.params.id },
-      include: {
-        agent: true,
-        messages: { orderBy: { createdAt: 'asc' } },
-      },
-    })
+      const moreThanPage = fresh.messages.length > CHAT_MESSAGES_PAGE_SIZE
+      const pageDesc = moreThanPage ? fresh.messages.slice(0, CHAT_MESSAGES_PAGE_SIZE) : fresh.messages
+      const pageAsc = [...pageDesc].reverse()
 
-    return {
-      conversation: {
+      const freshAsc = {
         ...fresh,
-        agentAvailableAt: fresh?.agentAvailableAt?.toISOString() ?? null,
-      },
-      messageUsage,
+        messages: serializeMessagesForClient(pageAsc),
+      }
+
+      return {
+        conversation: {
+          ...freshAsc,
+          agentAvailableAt: freshAsc.agentAvailableAt?.toISOString() ?? null,
+        },
+        messageUsage,
+        hasMore: totalMessageCount > CHAT_MESSAGES_PAGE_SIZE,
+        totalMessageCount,
+      }
+    },
+    {
+      query: t.Object({
+        beforeMessageId: t.Optional(t.String()),
+      }),
     }
-  })
+  )
   .post(
     '/',
     async (ctx) => {
@@ -183,17 +286,18 @@ export const conversations = new Elysia({ prefix: '/conversations' })
 
       const { conversationId, message } = ctx.body
 
-      const conversation = await prisma.conversation.findUnique({
-        where: { id: conversationId },
-        include: { agent: true },
-      })
+      const [conversation, messageUsage] = await Promise.all([
+        prisma.conversation.findUnique({
+          where: { id: conversationId },
+          include: { agent: true },
+        }),
+        getFreeMessageUsage(session.userId),
+      ])
 
       if (!conversation || conversation.userId !== session.userId || !userCanUseAgent(conversation.agent, session.userId)) {
         ctx.set.status = 404
         return { error: 'Conversation not found' }
       }
-
-      const messageUsage = await getFreeMessageUsage(session.userId)
       if (messageUsage.remaining <= 0) {
         ctx.set.status = 403
         return {
@@ -244,11 +348,11 @@ export const conversations = new Elysia({ prefix: '/conversations' })
             userEmotion,
             agentAway: true,
             agentAvailableAt: agentAvailableAt.toISOString(),
-          messageUsage: {
-            ...messageUsage,
+            messageUsage: {
+              ...messageUsage,
               used: messageUsage.used + 1,
               remaining: Math.max(0, messageUsage.limit - (messageUsage.used + 1)),
-          },
+            },
           }
         }
 

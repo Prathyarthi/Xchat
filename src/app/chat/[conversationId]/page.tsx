@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/features/auth/components/auth-provider'
 import { emotionConfig, type Emotion } from '@/lib/emotion'
@@ -96,8 +96,13 @@ export default function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [messageUsage, setMessageUsage] = useState<LimitUsage | null>(null)
   const [limitError, setLimitError] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingOlder, setLoadingOlder] = useState(false)
+  const [totalMessageCount, setTotalMessageCount] = useState<number | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const skipScrollToBottomRef = useRef(false)
 
   useEffect(() => {
     fetch(`/api/conversations/${conversationId}/messages`, { credentials: 'include' })
@@ -107,16 +112,65 @@ export default function ChatPage() {
           setConversation({ ...data.conversation, agentAvailableAt: data.conversation.agentAvailableAt ?? null })
           setMessages(data.conversation.messages)
           setMessageUsage(data.messageUsage ?? null)
+          setHasMore(Boolean(data.hasMore))
+          setTotalMessageCount(typeof data.totalMessageCount === 'number' ? data.totalMessageCount : null)
         } else {
           router.push('/explore')
         }
       })
       .finally(() => setLoading(false))
-  }, [conversationId])
+  }, [conversationId, router])
 
   useEffect(() => {
+    if (skipScrollToBottomRef.current) {
+      skipScrollToBottomRef.current = false
+      return
+    }
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, sending])
+
+  const loadOlderMessages = useCallback(async () => {
+    if (!hasMore || loadingOlder || messages.length === 0) return
+    const oldest = messages[0]
+    if (!oldest?.id || oldest.id.startsWith('optimistic-')) return
+
+    setLoadingOlder(true)
+    const el = scrollRef.current
+    const prevScrollHeight = el?.scrollHeight ?? 0
+
+    try {
+      const res = await fetch(
+        `/api/conversations/${conversationId}/messages?beforeMessageId=${encodeURIComponent(oldest.id)}`,
+        { credentials: 'include' }
+      )
+      const data = await res.json()
+      if (!res.ok) return
+
+      const older = (data.messages ?? []) as Message[]
+      if (older.length === 0) {
+        setHasMore(false)
+        return
+      }
+
+      skipScrollToBottomRef.current = true
+      setHasMore(Boolean(data.hasMore))
+      setMessages(prev => [...older, ...prev])
+
+      requestAnimationFrame(() => {
+        if (el) {
+          el.scrollTop = el.scrollHeight - prevScrollHeight
+        }
+      })
+    } finally {
+      setLoadingOlder(false)
+    }
+  }, [hasMore, loadingOlder, messages, conversationId])
+
+  const handleMessagesScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (!el || loadingOlder || !hasMore) return
+    if (el.scrollTop < 100) void loadOlderMessages()
+  }, [hasMore, loadingOlder, loadOlderMessages])
 
   const calcTypingDelay = (text: string): number => {
     const thinkMs = 500 + Math.random() * 1000   // 0.5–1.5s to "read" the message
@@ -153,6 +207,12 @@ export default function ChatPage() {
           const without = prev.filter(m => m.id !== optimistic.id)
           const humanMsg: Message = { ...optimistic, id: `human-${Date.now()}`, emotion: data.userEmotion || null }
           return data.message ? [...without, humanMsg, data.message] : [...without, humanMsg]
+        })
+        setTotalMessageCount(prev => {
+          if (prev == null) return prev
+          let delta = 1
+          if (data.message) delta += 1
+          return prev + delta
         })
       } else {
         setMessages(prev => prev.filter(m => m.id !== optimistic.id))
@@ -243,8 +303,10 @@ export default function ChatPage() {
             )}
 
             <div className="text-center pt-3 border-t border-white/6">
-              <p className="text-xl font-bold gradient-text">{messages.length}</p>
-              <p className="text-xs text-zinc-700">messages exchanged</p>
+              <p className="text-xl font-bold gradient-text">
+                {totalMessageCount ?? messages.length}
+              </p>
+              <p className="text-xs text-zinc-700">messages in this chat</p>
             </div>
           </div>
 
@@ -300,7 +362,20 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+          <div
+            ref={scrollRef}
+            onScroll={handleMessagesScroll}
+            className="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+          >
+            {hasMore && (
+              <div className="flex justify-center py-1 shrink-0">
+                {loadingOlder ? (
+                  <span className="text-xs text-zinc-500">Loading older messages…</span>
+                ) : (
+                  <span className="text-xs text-zinc-600">Scroll up for older messages</span>
+                )}
+              </div>
+            )}
             {limitError && (
               <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
                 <p className="text-sm text-amber-200">{limitError}</p>
