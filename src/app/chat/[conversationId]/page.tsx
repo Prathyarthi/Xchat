@@ -55,7 +55,7 @@ function TypingIndicator({ agentAvatar }: { agentAvatar: string }) {
   )
 }
 
-function MessageBubble({ message, userAvatar, agentAvatar, showSeen, agentName }: {
+function MessageBubble({ message, userAvatar, agentAvatar, showSeen }: {
   message: Message; userAvatar: string; agentAvatar: string; showSeen?: boolean; agentName?: string
 }) {
   const isHuman = message.senderType === 'HUMAN'
@@ -133,7 +133,7 @@ export default function ChatPage() {
   }, [messages, sending, seen, typing])
 
   const calcTypingDelay = (text: string): number => {
-    const thinkMs = 500 + Math.random() * 1000
+    const thinkMs = 0.5 + Math.random() * 0.5 // 0.5sec - 1sec
     const typeMs = (text.length / 20) * 1000
     return Math.min(7000, Math.max(800, thinkMs + typeMs))
   }
@@ -368,7 +368,6 @@ export default function ChatPage() {
                   message={msg}
                   userAvatar={userAvatar}
                   agentAvatar={agentAvatar}
-                  agentName={agent.name}
                   // Show "Seen" only under the last human message while seen=true
                   showSeen={seen && idx === lastHumanIndex}
                 />
