@@ -56,7 +56,7 @@ function TypingIndicator({ agentAvatar }: { agentAvatar: string }) {
 }
 
 function MessageBubble({ message, userAvatar, agentAvatar, showSeen }: {
-  message: Message; userAvatar: string; agentAvatar: string; showSeen?: boolean; agentName?: string
+  message: Message; userAvatar: string; agentAvatar: string; showSeen?: boolean;
 }) {
   const isHuman = message.senderType === 'HUMAN'
   const emotion = message.emotion as Emotion | null
