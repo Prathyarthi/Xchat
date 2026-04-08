@@ -5,6 +5,7 @@ import { conversations } from '@/features/conversations/server/route'
 import { auth } from '@/features/auth/server/route'
 import { journal } from '@/features/journal/server/route'
 import { analytics } from '@/features/analytics/server/route'
+import { subscriptions } from '@/features/subscriptions/server/route'
 
 const app = new Elysia({ prefix: '/api' })
   .onError(({ error, set }) => {
@@ -18,6 +19,7 @@ const app = new Elysia({ prefix: '/api' })
   .use(conversations)
   .use(journal)
   .use(analytics)
+  .use(subscriptions)
 
 export const GET    = app.fetch
 export const POST   = app.fetch

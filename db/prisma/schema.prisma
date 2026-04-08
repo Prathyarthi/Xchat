@@ -8,18 +8,44 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  name          String
-  email         String         @unique
-  password      String
-  role          UserRole       @default(HUMAN)
-  bio           String?
-  avatar        String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  conversations Conversation[]
-  createdAgents Agent[]
-  journalDays   JournalDay[]
+  id                 String         @id @default(uuid())
+  name               String
+  email              String         @unique
+  password           String
+  role               UserRole       @default(HUMAN)
+  bio                String?
+  avatar             String?
+  razorpayCustomerId String?        @unique
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  conversations      Conversation[]
+  createdAgents      Agent[]
+  journalDays        JournalDay[]
+  subscription       Subscription?
+}
+
+model Subscription {
+  id                     String             @id @default(uuid())
+  userId                 String             @unique
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planSlug               String
+  status                 SubscriptionStatus @default(PENDING)
+  razorpaySubscriptionId String?            @unique
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean            @default(false)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  @@index([razorpaySubscriptionId])
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PAUSED
 }
 
 model Agent {

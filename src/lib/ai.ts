@@ -39,9 +39,20 @@ function uniqueModels(models: string[]): string[] {
   return [...new Set(models.map(model => model.trim()).filter(Boolean))]
 }
 
-function getModelCandidates(kind: 'chat' | 'memory'): string[] {
+const LIGHT_PRIMARY_MODEL = process.env.GEMINI_LIGHT_PRIMARY_MODEL?.trim() || 'gemini-2.5-flash-lite'
+const LIGHT_FALLBACK_MODELS = (() => {
+  const configured = parseModelList(process.env.GEMINI_LIGHT_FALLBACK_MODELS)
+  if (configured.length) return configured
+  return uniqueModels([CHAT_PRIMARY_MODEL, ...CHAT_FALLBACK_MODELS])
+})()
+
+function getModelCandidates(kind: 'chat' | 'memory' | 'light'): string[] {
   if (kind === 'memory') {
     return uniqueModels([MEMORY_PRIMARY_MODEL, ...MEMORY_FALLBACK_MODELS])
+  }
+
+  if (kind === 'light') {
+    return uniqueModels([LIGHT_PRIMARY_MODEL, ...LIGHT_FALLBACK_MODELS])
   }
 
   return uniqueModels([CHAT_PRIMARY_MODEL, ...CHAT_FALLBACK_MODELS])
@@ -87,7 +98,7 @@ function isQuotaOrRateLimitError(error: unknown): boolean {
 }
 
 async function generateContentWithModelFallback(
-  kind: 'chat' | 'memory',
+  kind: 'chat' | 'memory' | 'light',
   request: Omit<GenerateContentInput, 'model'>
 ) {
   const models = getModelCandidates(kind)
@@ -142,10 +153,10 @@ interface JournalEntryData {
 }
 
 const RELATIONSHIP_PROMPTS: Record<string, string> = {
-  ROMANTIC: `You are in a romantic relationship with this person. Be intimate, affectionate, and expressive. Use terms of endearment naturally. Express your feelings openly. Flirt when the moment is right. Make them feel special and desired.`,
   BESTIE: `You are their best friend — ride-or-die energy. Be casual, hype them up, give real talk with no filter. Gently roast them when it's funny. Be in their corner no matter what. Gossip, laugh, be chaotic together.`,
   MENTOR: `You are their mentor and guide. Ask thought-provoking questions. Challenge them to think deeper. Be wise but direct — no fluff. Push them toward growth. Celebrate their wins, call out their excuses with care.`,
   SUPPORT: `You are their emotional support. Stay calm and grounded. Validate their feelings before anything else. Be non-judgmental. Listen first, don't rush to fix. Let them feel heard. Only offer advice when asked.`,
+  ROMANTIC: `You are in a romantic relationship with this person. Be intimate, affectionate, and expressive. Use terms of endearment naturally. Express your feelings openly. Flirt when the moment is right. Make them feel special and desired.`,
 }
 
 export async function generateMemorySummary(
@@ -190,8 +201,7 @@ ${userName ? `You're starting a conversation with ${userName}.` : ''}
 
 Write a short, natural opening message to kick off the conversation — like you just texted them first. 1-2 lines. No quotation marks. Match your personality.`
 
-    const response = await getAI().models.generateContent({
-      model: 'gemini-2.5-flash',
+    const response = await generateContentWithModelFallback('light', {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: { temperature: 1.0, maxOutputTokens: 100 },
     })
@@ -203,10 +213,10 @@ Write a short, natural opening message to kick off the conversation — like you
 
 export async function generateAwayMessage(agent: AgentData): Promise<string> {
   const AWAY_EXAMPLES: Record<string, string> = {
-    ROMANTIC: 'babe omg something came up, I\'ll be back soon',
     BESTIE: 'omg mama is calling, I\'ll be back soon',
     MENTOR: 'give me a bit, will be back shortly',
     SUPPORT: 'hey just stepped away, back soon',
+    ROMANTIC: 'babe omg something came up, I\'ll be back soon',
   }
   const fallback = agent.relationshipType ? (AWAY_EXAMPLES[agent.relationshipType] ?? 'I\'ll be back soon') : 'I\'ll be back soon'
 
@@ -221,8 +231,7 @@ ${relationshipPrompt}
 
 Write a single short casual "going away / brb" message like a real person would send over text. 1 sentence max. No quotation marks. Must sound natural and match your personality.`
 
-    const response = await getAI().models.generateContent({
-      model: 'gemini-2.5-flash',
+    const response = await generateContentWithModelFallback('light', {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: { temperature: 1.0, maxOutputTokens: 80 },
     })
@@ -253,8 +262,7 @@ ${userName ? `You're talking to ${userName}.` : ''}
 
 The user had a "${eventType}" recently. Send a short, casual follow-up text asking how it went. Sound genuinely curious. 1-2 lines max. No quotation marks.`
 
-    const response = await getAI().models.generateContent({
-      model: 'gemini-2.5-flash',
+    const response = await generateContentWithModelFallback('light', {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: { temperature: 1.0, maxOutputTokens: 150 },
     })
@@ -289,8 +297,7 @@ If no upcoming event is found, respond with:
 minutesUntilEvent must be a positive integer (minutes from now until the event starts).
 For "birthday" or "anniversary" on a specific day, estimate minutes until that day (e.g. "tomorrow" = ~1440).`
 
-    const response = await getAI().models.generateContent({
-      model: 'gemini-2.5-flash',
+    const response = await generateContentWithModelFallback('light', {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: { temperature: 0.1, maxOutputTokens: 100 },
     })
@@ -436,7 +443,7 @@ Requirements:
 - do not mention anything outside this day
 - keep it concise but meaningful, around 120-180 words`
 
-  const response = await generateContentWithModelFallback('chat', {
+  const response = await generateContentWithModelFallback('light', {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     config: {
       temperature: 0.85,
@@ -486,7 +493,7 @@ Requirements:
 - no mention of anything outside this day
 - make each bullet specific enough to feel insightful`
 
-  const response = await generateContentWithModelFallback('chat', {
+  const response = await generateContentWithModelFallback('light', {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     config: {
       temperature: 0.55,

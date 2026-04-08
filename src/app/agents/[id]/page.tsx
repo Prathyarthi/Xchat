@@ -7,10 +7,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import ConnectButton from './connect-button'
 
 const RELATIONSHIP_BADGES: Record<string, { label: string; className: string }> = {
-  ROMANTIC: { label: '💕 Romantic', className: 'border-pink-500/40 text-pink-400 bg-pink-500/10' },
   BESTIE:   { label: '🤝 Bestie',   className: 'border-blue-500/40 text-blue-400 bg-blue-500/10' },
   MENTOR:   { label: '🧠 Mentor',   className: 'border-amber-500/40 text-amber-400 bg-amber-500/10' },
   SUPPORT:  { label: '🫂 Support',  className: 'border-teal-500/40 text-teal-400 bg-teal-500/10' },
+  ROMANTIC: { label: '💕 Romantic', className: 'border-pink-500/40 text-pink-400 bg-pink-500/10' },
 }
 
 export default async function AgentProfilePage({ params }: { params: Promise<{ id: string }> }) {
@@ -19,7 +19,10 @@ export default async function AgentProfilePage({ params }: { params: Promise<{ i
   if (!session?.user) redirect('/sign-in')
 
   const agent = await prisma.agent.findFirst({
-    where: { id, creatorId: session.user.id as string },
+    where: {
+      id,
+      OR: [{ creatorId: null }, { creatorId: session.user.id as string }],
+    },
   })
 
   if (!agent) notFound()

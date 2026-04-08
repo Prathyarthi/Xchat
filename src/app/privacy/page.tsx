@@ -2,8 +2,8 @@ import { Card, CardContent } from '@/components/ui/card'
 
 const sections = [
   {
-    title: 'What Closr stores',
-    body: 'Closr stores account details, companion settings, conversation history, and journal entries so the product can provide continuity, reflection, and memory over time.',
+    title: 'What Closer stores',
+    body: 'Closer stores account details, companion settings, conversation history, and journal entries so the product can provide continuity, reflection, and memory over time.',
   },
   {
     title: 'How data is used',
@@ -27,7 +27,7 @@ export default function PrivacyPage() {
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-600">Privacy</p>
           <h1 className="text-4xl font-bold mt-3">Privacy and data expectations</h1>
           <p className="text-sm text-zinc-600 mt-4 leading-relaxed">
-            This page gives Closr a clear trust surface for users who are deciding whether to bring private thoughts into the product.
+            This page gives Closer a clear trust surface for users who are deciding whether to bring private thoughts into the product.
           </p>
         </div>
 

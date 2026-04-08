@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card'
 const sections = [
   {
     title: 'Personal use',
-    body: 'Closr is intended for personal companion and reflection use. Users are responsible for the content they create and for how they choose to interact with companion personas.',
+    body: 'Closer is intended for personal companion and reflection use. Users are responsible for the content they create and for how they choose to interact with companion personas.',
   },
   {
     title: 'AI limitations',

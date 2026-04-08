@@ -4,7 +4,8 @@ import { AIQuotaExhaustedError, generateAgentResponse, generateMemorySummary, ge
 import { getSession } from '@/lib/session'
 import { detectEmotion } from '@/lib/emotion'
 import { trackEvent } from '@/features/analytics/lib/server'
-import { getFreeMessageUsage, FREE_PLAN_LIMITS } from '@/features/pricing/lib/limits'
+import { getFreeMessageUsage } from '@/features/pricing/lib/limits'
+import { userCanUseAgent } from '@/lib/agent-access'
 
 const GHOST_PROBABILITY: Record<string, number> = {
   ROMANTIC: 0.05,
@@ -22,7 +23,10 @@ export const conversations = new Elysia({ prefix: '/conversations' })
 
       const { agentId } = ctx.body
       const agent = await prisma.agent.findFirst({
-        where: { id: agentId, creatorId: session.userId },
+        where: {
+          id: agentId,
+          OR: [{ creatorId: null }, { creatorId: session.userId }],
+        },
       })
       if (!agent) { ctx.set.status = 404; return { error: 'Agent not found' } }
 
@@ -63,7 +67,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
       },
     })
 
-    if (!conversation || conversation.userId !== session.userId || conversation.agent.creatorId !== session.userId) {
+    if (!conversation || conversation.userId !== session.userId || !userCanUseAgent(conversation.agent, session.userId)) {
       ctx.set.status = 404
       return { error: 'Conversation not found' }
     }
@@ -184,17 +188,17 @@ export const conversations = new Elysia({ prefix: '/conversations' })
         include: { agent: true },
       })
 
-      if (!conversation || conversation.userId !== session.userId || conversation.agent.creatorId !== session.userId) {
+      if (!conversation || conversation.userId !== session.userId || !userCanUseAgent(conversation.agent, session.userId)) {
         ctx.set.status = 404
         return { error: 'Conversation not found' }
       }
 
       const messageUsage = await getFreeMessageUsage(session.userId)
-      if (messageUsage.used >= FREE_PLAN_LIMITS.monthlyMessages) {
+      if (messageUsage.remaining <= 0) {
         ctx.set.status = 403
         return {
           code: 'FREE_MESSAGE_LIMIT_REACHED',
-          error: 'You have used all 50 free messages for this month. Upgrade to continue chatting.',
+          error: 'You have reached your message limit for this month. Upgrade to continue chatting.',
           messageUsage,
           upgradeUrl: '/pricing',
         }
@@ -243,7 +247,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
           messageUsage: {
             ...messageUsage,
               used: messageUsage.used + 1,
-              remaining: Math.max(0, FREE_PLAN_LIMITS.monthlyMessages - (messageUsage.used + 1)),
+              remaining: Math.max(0, messageUsage.limit - (messageUsage.used + 1)),
           },
           }
         }
@@ -269,7 +273,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
           messageUsage: {
             ...messageUsage,
             used: messageUsage.used + 1,
-            remaining: Math.max(0, FREE_PLAN_LIMITS.monthlyMessages - (messageUsage.used + 1)),
+            remaining: Math.max(0, messageUsage.limit - (messageUsage.used + 1)),
           },
         }
       }
@@ -310,7 +314,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
           messageUsage: {
             ...messageUsage,
             used: messageUsage.used + 1,
-            remaining: Math.max(0, FREE_PLAN_LIMITS.monthlyMessages - (messageUsage.used + 1)),
+            remaining: Math.max(0, messageUsage.limit - (messageUsage.used + 1)),
           },
         }
       }
@@ -358,7 +362,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
           messageUsage: {
             ...messageUsage,
             used: messageUsage.used + 1,
-            remaining: Math.max(0, FREE_PLAN_LIMITS.monthlyMessages - (messageUsage.used + 1)),
+            remaining: Math.max(0, messageUsage.limit - (messageUsage.used + 1)),
           },
         }
       }
@@ -414,7 +418,7 @@ export const conversations = new Elysia({ prefix: '/conversations' })
         messageUsage: {
           ...messageUsage,
           used: messageUsage.used + 1,
-          remaining: Math.max(0, FREE_PLAN_LIMITS.monthlyMessages - (messageUsage.used + 1)),
+          remaining: Math.max(0, messageUsage.limit - (messageUsage.used + 1)),
         },
       }
     },
