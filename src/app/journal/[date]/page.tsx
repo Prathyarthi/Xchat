@@ -60,6 +60,7 @@ export default function JournalDayPage() {
   const [aiOutput, setAiOutput] = useState<string | null>(null)
   const [lastAction, setLastAction] = useState<JournalAction | null>(null)
   const [journalUsage, setJournalUsage] = useState<LimitUsage | null>(null)
+  const [journalAiUsage, setJournalAiUsage] = useState<LimitUsage | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/sign-in')
@@ -77,6 +78,7 @@ export default function JournalDayPage() {
         }
         setDay(data.day)
         setJournalUsage(data.journalUsage ?? null)
+        setJournalAiUsage(data.journalAiUsage ?? null)
         setAiOutput(null)
         setLastAction(null)
       })
@@ -110,6 +112,7 @@ export default function JournalDayPage() {
 
       setDay(data.day)
       setJournalUsage(data.journalUsage ?? null)
+      setJournalAiUsage(data.journalAiUsage ?? null)
       setEntry('')
       setMood('')
     } catch (err) {
@@ -133,17 +136,20 @@ export default function JournalDayPage() {
 
       const data = await res.json()
       if (!res.ok) {
+        if (data.journalAiUsage) setJournalAiUsage(data.journalAiUsage)
         throw new Error(data.error || 'Failed to run journal AI action.')
       }
 
       setAiOutput(data.output)
       setLastAction(action)
+      if (data.journalAiUsage) setJournalAiUsage(data.journalAiUsage)
 
       const refresh = await fetch(`/api/journal/${date}`, { credentials: 'include' })
       const refreshData = await refresh.json()
       if (refresh.ok) {
         setDay(refreshData.day)
         setJournalUsage(refreshData.journalUsage ?? null)
+        setJournalAiUsage(refreshData.journalAiUsage ?? null)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to run journal AI action.')
@@ -162,6 +168,9 @@ export default function JournalDayPage() {
 
   const dayMood = day?.mood ? emotionConfig[day.mood as keyof typeof emotionConfig] : null
   const hasJournalLimitReached = Boolean(journalUsage && journalUsage.remaining <= 0)
+  const hasJournalAiLimitReached = Boolean(journalAiUsage && journalAiUsage.remaining <= 0)
+  const showFiniteEntryQuota = Boolean(journalUsage && journalUsage.limit < 100_000)
+  const showFiniteAiQuota = Boolean(journalAiUsage && journalAiUsage.limit < 100_000)
 
   return (
     <div className="min-h-[calc(100vh-64px)] pb-16 px-4 pt-8">
@@ -252,7 +261,11 @@ export default function JournalDayPage() {
                   <Button
                     variant="outline"
                     className="rounded-full border-white/8 text-zinc-300 hover:bg-white/5"
-                    disabled={runningAction !== null || !day?.entries.length}
+                    disabled={
+                      runningAction !== null ||
+                      !day?.entries.length ||
+                      hasJournalAiLimitReached
+                    }
                     onClick={() => runAction('reflect')}
                   >
                     {runningAction === 'reflect' ? 'Reflecting...' : 'Reflect on this day'}
@@ -260,7 +273,11 @@ export default function JournalDayPage() {
                   <Button
                     variant="outline"
                     className="rounded-full border-white/8 text-zinc-300 hover:bg-white/5"
-                    disabled={runningAction !== null || !day?.entries.length}
+                    disabled={
+                      runningAction !== null ||
+                      !day?.entries.length ||
+                      hasJournalAiLimitReached
+                    }
                     onClick={() => runAction('summarize')}
                   >
                     {runningAction === 'summarize' ? 'Summarizing...' : 'Summarize this day'}
@@ -269,6 +286,19 @@ export default function JournalDayPage() {
 
                 {!day?.entries.length && (
                   <p className="text-sm text-zinc-600">Save at least one entry before using AI tools.</p>
+                )}
+
+                {hasJournalAiLimitReached && day && day.entries.length > 0 && (
+                  <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                    <p className="text-sm text-amber-200">
+                      Free plan: no AI reflections or summaries left this month.
+                    </p>
+                    <div className="mt-3">
+                      <Button asChild size="sm" className="rounded-full">
+                        <Link href="/pricing">Upgrade for unlimited journal AI</Link>
+                      </Button>
+                    </div>
+                  </div>
                 )}
 
                 {aiOutput && (
@@ -342,14 +372,28 @@ export default function JournalDayPage() {
                   </div>
                 </div>
 
-                {journalUsage && (
+                {showFiniteEntryQuota && journalUsage && (
                   <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
-                    <p className="text-[10px] uppercase tracking-wider text-zinc-700 mb-2">Free plan usage</p>
-                    <p className="text-sm text-zinc-400">{journalUsage.used}/{journalUsage.limit} entries used this month</p>
+                    <p className="text-[10px] uppercase tracking-wider text-zinc-700 mb-2">Entries this month</p>
+                    <p className="text-sm text-zinc-400">{journalUsage.used}/{journalUsage.limit} entries used</p>
                     <p className="text-xs text-zinc-600 mt-1">
                       {journalUsage.remaining > 0
                         ? `${journalUsage.remaining} entries left`
                         : 'Upgrade to add more entries this month'}
+                    </p>
+                  </div>
+                )}
+
+                {showFiniteAiQuota && journalAiUsage && (
+                  <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
+                    <p className="text-[10px] uppercase tracking-wider text-zinc-700 mb-2">Journal AI this month</p>
+                    <p className="text-sm text-zinc-400">
+                      {journalAiUsage.used}/{journalAiUsage.limit} reflections &amp; summaries used
+                    </p>
+                    <p className="text-xs text-zinc-600 mt-1">
+                      {journalAiUsage.remaining > 0
+                        ? `${journalAiUsage.remaining} runs left (reflect + summarize share the pool)`
+                        : 'Upgrade for unlimited journal AI'}
                     </p>
                   </div>
                 )}

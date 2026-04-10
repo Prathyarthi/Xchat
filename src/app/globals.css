@@ -63,6 +63,28 @@ html, body {
   box-sizing: border-box;
 }
 
+/* Pointer on interactive primitives (complements shadcn Button / TrackedLink). */
+a[href]:not([aria-disabled='true']) {
+  cursor: pointer;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+label[for] {
+  cursor: pointer;
+}
+
+select,
+summary {
+  cursor: pointer;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

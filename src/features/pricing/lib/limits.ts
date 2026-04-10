@@ -5,6 +5,7 @@ export const FREE_PLAN_LIMITS = {
   companions: 2,
   monthlyMessages: 50,
   monthlyJournalEntries: 100,
+  monthlyJournalAiActions: 10,
 } as const
 
 /** Practical “unlimited” for Closer Plus (Razorpay-backed). */
@@ -12,7 +13,13 @@ export const PLUS_PLAN_LIMITS = {
   companions: 1_000_000,
   monthlyMessages: 1_000_000,
   monthlyJournalEntries: 1_000_000,
+  monthlyJournalAiActions: 1_000_000,
 } as const
+
+const JOURNAL_AI_COMPLETION_EVENTS = [
+  'journal_reflection_completed',
+  'journal_summary_completed',
+] as const
 
 export interface LimitUsage {
   used: number
@@ -35,51 +42,58 @@ function getCurrentMonthWindow() {
   return { start, end }
 }
 
-async function getLimitsForUser(userId: string) {
-  const plus = await userHasActivePlus(userId)
-  return plus ? PLUS_PLAN_LIMITS : FREE_PLAN_LIMITS
-}
-
 export async function getFreeCompanionUsage(userId: string) {
-  const limits = await getLimitsForUser(userId)
-  const used = await prisma.agent.count({
-    where: { creatorId: userId },
-  })
-
+  const [plus, used] = await Promise.all([
+    userHasActivePlus(userId),
+    prisma.agent.count({ where: { creatorId: userId } }),
+  ])
+  const limits = plus ? PLUS_PLAN_LIMITS : FREE_PLAN_LIMITS
   return buildUsage(used, limits.companions)
 }
 
 export async function getFreeMessageUsage(userId: string) {
-  const limits = await getLimitsForUser(userId)
   const { start, end } = getCurrentMonthWindow()
-  const used = await prisma.message.count({
-    where: {
-      senderType: 'HUMAN',
-      senderId: userId,
-      createdAt: {
-        gte: start,
-        lt: end,
+  const [plus, used] = await Promise.all([
+    userHasActivePlus(userId),
+    prisma.message.count({
+      where: {
+        senderType: 'HUMAN',
+        senderId: userId,
+        createdAt: { gte: start, lt: end },
       },
-    },
-  })
-
+    }),
+  ])
+  const limits = plus ? PLUS_PLAN_LIMITS : FREE_PLAN_LIMITS
   return buildUsage(used, limits.monthlyMessages)
 }
 
 export async function getFreeJournalUsage(userId: string) {
-  const limits = await getLimitsForUser(userId)
   const { start, end } = getCurrentMonthWindow()
-  const used = await prisma.journalEntry.count({
-    where: {
-      createdAt: {
-        gte: start,
-        lt: end,
+  const [plus, used] = await Promise.all([
+    userHasActivePlus(userId),
+    prisma.journalEntry.count({
+      where: {
+        createdAt: { gte: start, lt: end },
+        journalDay: { userId },
       },
-      journalDay: {
-        userId,
-      },
-    },
-  })
-
+    }),
+  ])
+  const limits = plus ? PLUS_PLAN_LIMITS : FREE_PLAN_LIMITS
   return buildUsage(used, limits.monthlyJournalEntries)
+}
+
+export async function getFreeJournalAiUsage(userId: string) {
+  const { start, end } = getCurrentMonthWindow()
+  const [plus, used] = await Promise.all([
+    userHasActivePlus(userId),
+    prisma.appEvent.count({
+      where: {
+        userId,
+        name: { in: [...JOURNAL_AI_COMPLETION_EVENTS] },
+        createdAt: { gte: start, lt: end },
+      },
+    }),
+  ])
+  const limits = plus ? PLUS_PLAN_LIMITS : FREE_PLAN_LIMITS
+  return buildUsage(used, limits.monthlyJournalAiActions)
 }

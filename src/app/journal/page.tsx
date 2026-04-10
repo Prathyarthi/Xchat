@@ -32,6 +32,7 @@ export default function JournalCalendarPage() {
   const [monthKey, setMonthKey] = useState(() => getTodayKey().slice(0, 7))
   const [days, setDays] = useState<JournalMonthDay[]>([])
   const [journalUsage, setJournalUsage] = useState<LimitUsage | null>(null)
+  const [journalAiUsage, setJournalAiUsage] = useState<LimitUsage | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -47,6 +48,7 @@ export default function JournalCalendarPage() {
       .then(data => {
         setDays(data.days || [])
         setJournalUsage(data.journalUsage ?? null)
+        setJournalAiUsage(data.journalAiUsage ?? null)
       })
       .finally(() => setLoading(false))
   }, [monthKey, user])
@@ -54,6 +56,8 @@ export default function JournalCalendarPage() {
   const dayMap = useMemo(() => new Map(days.map(day => [day.date, day])), [days])
   const calendarDays = useMemo(() => buildCalendarDays(monthKey), [monthKey])
   const todayKey = getTodayKey()
+  const showFiniteEntryQuota = Boolean(journalUsage && journalUsage.limit < 100_000)
+  const showFiniteAiQuota = Boolean(journalAiUsage && journalAiUsage.limit < 100_000)
 
   if (authLoading || !user) {
     return (
@@ -189,16 +193,29 @@ export default function JournalCalendarPage() {
                   <p className="text-xs uppercase tracking-wider text-zinc-700">Habit loop</p>
                   <p className="text-sm text-zinc-400 mt-2">The calendar gives users a reason to return every day and keep their streak alive.</p>
                 </div>
-                {journalUsage && (
+                {showFiniteEntryQuota && journalUsage && (
                   <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
-                    <p className="text-xs uppercase tracking-wider text-zinc-700">Free plan usage</p>
+                    <p className="text-xs uppercase tracking-wider text-zinc-700">Entries this month</p>
                     <p className="text-sm text-zinc-400 mt-2">
-                      {journalUsage.used}/{journalUsage.limit} entries used this month
+                      {journalUsage.used}/{journalUsage.limit} entries used
                     </p>
                     <p className="text-xs text-zinc-600 mt-1">
                       {journalUsage.remaining > 0
                         ? `${journalUsage.remaining} entries left before upgrade`
                         : 'Free journal limit reached'}
+                    </p>
+                  </div>
+                )}
+                {showFiniteAiQuota && journalAiUsage && (
+                  <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
+                    <p className="text-xs uppercase tracking-wider text-zinc-700">Journal AI this month</p>
+                    <p className="text-sm text-zinc-400 mt-2">
+                      {journalAiUsage.used}/{journalAiUsage.limit} reflections &amp; summaries used
+                    </p>
+                    <p className="text-xs text-zinc-600 mt-1">
+                      {journalAiUsage.remaining > 0
+                        ? `${journalAiUsage.remaining} runs left`
+                        : 'No free journal AI runs left'}
                     </p>
                   </div>
                 )}
