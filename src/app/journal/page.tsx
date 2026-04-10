@@ -227,7 +227,7 @@ export default function JournalCalendarPage() {
                 <Link href={`/journal/${todayKey}`}>Open today&apos;s journal</Link>
               </Button>
 
-              {journalUsage && journalUsage.remaining <= 0 && !hasPlusJournalPlan && (
+              {journalUsage && journalUsage.remaining <= 0 && (
                 <Button asChild variant="outline" className="rounded-full border-white/8 text-zinc-300 hover:bg-white/5">
                   <Link href="/pricing">Upgrade for more journal space</Link>
                 </Button>

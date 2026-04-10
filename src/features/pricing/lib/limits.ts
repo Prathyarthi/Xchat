@@ -4,9 +4,8 @@ import { userHasActivePlus } from '@/features/subscriptions/lib/subscription-acc
 export const FREE_PLAN_LIMITS = {
   companions: 2,
   monthlyMessages: 50,
-  monthlyJournalEntries: 100,
-  monthlyJournalAiActions: 10,
   monthlyJournalEntries: 15,
+  monthlyJournalAiActions: 10,
 } as const
 
 /** Practical “unlimited” for Closer Plus (Razorpay-backed). */
