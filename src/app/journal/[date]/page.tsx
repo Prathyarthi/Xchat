@@ -33,6 +33,8 @@ interface LimitUsage {
   remaining: number
 }
 
+const PRACTICAL_UNLIMITED_THRESHOLD = 100_000
+
 const MOOD_OPTIONS = [
   { value: '', label: 'Auto detect from entry' },
   { value: 'happy', label: 'Happy' },

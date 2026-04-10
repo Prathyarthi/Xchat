@@ -24,6 +24,8 @@ interface LimitUsage {
   remaining: number
 }
 
+const PRACTICAL_UNLIMITED_THRESHOLD = 100_000
+
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export default function JournalCalendarPage() {
@@ -225,7 +227,7 @@ export default function JournalCalendarPage() {
                 <Link href={`/journal/${todayKey}`}>Open today&apos;s journal</Link>
               </Button>
 
-              {journalUsage && journalUsage.remaining <= 0 && (
+              {journalUsage && journalUsage.remaining <= 0 && !hasPlusJournalPlan && (
                 <Button asChild variant="outline" className="rounded-full border-white/8 text-zinc-300 hover:bg-white/5">
                   <Link href="/pricing">Upgrade for more journal space</Link>
                 </Button>

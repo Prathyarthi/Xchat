@@ -6,6 +6,7 @@ export const FREE_PLAN_LIMITS = {
   monthlyMessages: 50,
   monthlyJournalEntries: 100,
   monthlyJournalAiActions: 10,
+  monthlyJournalEntries: 15,
 } as const
 
 /** Practical “unlimited” for Closer Plus (Razorpay-backed). */

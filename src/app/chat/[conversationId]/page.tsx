@@ -39,6 +39,8 @@ interface LimitUsage {
   remaining: number
 }
 
+const PRACTICAL_UNLIMITED_THRESHOLD = 100_000
+
 function TypingIndicator({ agentAvatar }: { agentAvatar: string }) {
   return (
     <div className="flex items-end gap-3">
@@ -253,6 +255,7 @@ export default function ChatPage() {
     ? new Date(conversation.agentAvailableAt) > new Date()
     : false
   const hasMessageLimitReached = Boolean(messageUsage && messageUsage.remaining <= 0)
+  const hasPlusMessagePlan = Boolean(messageUsage && messageUsage.limit >= PRACTICAL_UNLIMITED_THRESHOLD)
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col">
@@ -311,18 +314,28 @@ export default function ChatPage() {
           </div>
 
           <div className="glass rounded-2xl p-4">
-            <p className="text-[10px] text-zinc-700 uppercase tracking-wider mb-3">Free plan usage</p>
+            <p className="text-[10px] text-zinc-700 uppercase tracking-wider mb-3">
+              {hasPlusMessagePlan ? 'Closer Plus' : 'Free plan usage'}
+            </p>
             {messageUsage ? (
               <div className="flex flex-col gap-3">
                 <div className="rounded-xl border border-white/8 bg-white/3 p-3">
-                  <p className="text-xs text-zinc-400">{messageUsage.used}/{messageUsage.limit} messages this month</p>
-                  <p className="text-[10px] text-zinc-600 mt-1">
-                    {messageUsage.remaining > 0
-                      ? `${messageUsage.remaining} free messages left`
-                      : 'Free limit reached'}
-                  </p>
+                  {hasPlusMessagePlan ? (
+                    <p className="text-xs text-zinc-400">
+                      Active - messaging is available without the free-tier cap.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-zinc-400">{messageUsage.used}/{messageUsage.limit} messages this month</p>
+                      <p className="text-[10px] text-zinc-600 mt-1">
+                        {messageUsage.remaining > 0
+                          ? `${messageUsage.remaining} free messages left`
+                          : 'Free limit reached'}
+                      </p>
+                    </>
+                  )}
                 </div>
-                {hasMessageLimitReached && (
+                {hasMessageLimitReached && !hasPlusMessagePlan && (
                   <Button asChild size="sm" className="rounded-full">
                     <Link href="/pricing">Upgrade to keep chatting</Link>
                   </Button>
@@ -417,7 +430,9 @@ export default function ChatPage() {
             </div>
             <p className="text-[10px] text-zinc-700 mt-1.5 text-center">
               {messageUsage
-                ? `${messageUsage.used}/${messageUsage.limit} free messages used this month`
+                ? hasPlusMessagePlan
+                  ? 'Closer Plus active'
+                  : `${messageUsage.used}/${messageUsage.limit} free messages used this month`
                 : 'Enter to send · Shift+Enter for new line'}
             </p>
           </div>

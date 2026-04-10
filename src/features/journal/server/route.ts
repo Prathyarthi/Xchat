@@ -291,14 +291,14 @@ export const journal = new Elysia({ prefix: '/journal' })
 
         const output = ctx.body.action === 'reflect'
           ? await generateJournalReflection(entries, {
-              dateLabel: ctx.params.date,
-              mood: day.mood ?? undefined,
-              previousSummary: day.summary ?? undefined,
-            })
+            dateLabel: ctx.params.date,
+            mood: day.mood ?? undefined,
+            previousSummary: day.summary ?? undefined,
+          })
           : await generateJournalDaySummary(entries, {
-              dateLabel: ctx.params.date,
-              mood: day.mood ?? undefined,
-            })
+            dateLabel: ctx.params.date,
+            mood: day.mood ?? undefined,
+          })
 
         await prisma.journalDay.update({
           where: { id: day.id },
