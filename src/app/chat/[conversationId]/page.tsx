@@ -57,8 +57,8 @@ function TypingIndicator({ agentAvatar }: { agentAvatar: string }) {
   )
 }
 
-function MessageBubble({ message, userAvatar, agentAvatar }: {
-  message: Message; userAvatar: string; agentAvatar: string
+function MessageBubble({ message, userAvatar, agentAvatar, showSeen }: {
+  message: Message; userAvatar: string; agentAvatar: string; showSeen?: boolean;
 }) {
   const isHuman = message.senderType === 'HUMAN'
   const emotion = message.emotion as Emotion | null
@@ -75,13 +75,25 @@ function MessageBubble({ message, userAvatar, agentAvatar }: {
         <div className={`px-4 py-3 text-sm leading-relaxed ${isHuman ? 'bubble-human' : 'bubble-agent'}`}>
           {message.content}
         </div>
-        {emotionMeta && (
-          <div className="flex items-center gap-1 px-2">
-            <span className="text-xs">{emotionMeta.emoji}</span>
-            <span className="text-[10px]" style={{ color: emotionMeta.color }}>{emotionMeta.label}</span>
+        <div className={`max-w-[70%] md:max-w-[60%] ${isHuman ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
+          <div className={`px-4 py-3 text-sm leading-relaxed ${isHuman ? 'bubble-human' : 'bubble-agent'}`}>
+            {message.content}
           </div>
-        )}
+          {emotionMeta && (
+            <div className="flex items-center gap-1 px-2">
+              <span className="text-xs">{emotionMeta.emoji}</span>
+              <span className="text-[10px]" style={{ color: emotionMeta.color }}>{emotionMeta.label}</span>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Seen indicator — only rendered under the last human message while seen=true */}
+      {isHuman && showSeen && (
+        <div className="mt-1 pr-11 animate-fade-in">
+          <span className="text-[10px] text-zinc-500">Seen</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -94,6 +106,8 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [seen, setSeen] = useState(false)       // "Seen" visible under last human message
+  const [typing, setTyping] = useState(false)   // agent typing indicator visible
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [messageUsage, setMessageUsage] = useState<LimitUsage | null>(null)
@@ -129,7 +143,7 @@ export default function ChatPage() {
       return
     }
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, sending])
+  }, [messages, sending, seen, typing])
 
   const loadOlderMessages = useCallback(async () => {
     if (!hasMore || loadingOlder || messages.length === 0) return
@@ -175,8 +189,8 @@ export default function ChatPage() {
   }, [hasMore, loadingOlder, loadOlderMessages])
 
   const calcTypingDelay = (text: string): number => {
-    const thinkMs = 500 + Math.random() * 1000   // 0.5–1.5s to "read" the message
-    const typeMs = (text.length / 20) * 1000      // ~20 chars/sec typing speed
+    const thinkMs = 0.5 + Math.random() * 0.5 // 0.5sec - 1sec
+    const typeMs = (text.length / 20) * 1000
     return Math.min(7000, Math.max(800, thinkMs + typeMs))
   }
 
@@ -188,6 +202,9 @@ export default function ChatPage() {
     setMessages(prev => [...prev, optimistic])
     setInput('')
     setSending(true)
+    setSeen(false)
+    setTyping(false)
+
     try {
       const res = await fetch('/api/conversations', {
         method: 'POST',
@@ -196,18 +213,38 @@ export default function ChatPage() {
         body: JSON.stringify({ conversationId, message: text }),
       })
       const data = await res.json()
+
       if (res.ok) {
         setMessageUsage(data.messageUsage ?? null)
         if (data.agentAvailableAt !== undefined) {
           setConversation(prev => prev ? { ...prev, agentAvailableAt: data.agentAvailableAt } : prev)
         }
-        // Simulate human typing delay for normal (non-away) responses
+
         if (!data.agentAway && data.message?.content) {
-          await new Promise(resolve => setTimeout(resolve, calcTypingDelay(data.message.content)))
+          const typingDelay = calcTypingDelay(data.message.content)
+
+          // Step 1 — API responded, agent has "read" the message → show Seen
+          setSeen(true)
+
+          // Step 2 — short pause so user sees "Seen", then agent starts typing → Seen disappears
+          await new Promise(resolve => setTimeout(resolve, 1200))
+          setSeen(false)
+          setTyping(true)
+
+          // Step 3 — typing plays out for a realistic duration
+          await new Promise(resolve => setTimeout(resolve, typingDelay))
+
+          // Step 4 — agent message renders, typing stops
+          setTyping(false)
         }
+
         setMessages(prev => {
           const without = prev.filter(m => m.id !== optimistic.id)
-          const humanMsg: Message = { ...optimistic, id: `human-${Date.now()}`, emotion: data.userEmotion || null }
+          const humanMsg: Message = {
+            ...optimistic,
+            id: `human-${Date.now()}`,
+            emotion: data.userEmotion || null,
+          }
           return data.message ? [...without, humanMsg, data.message] : [...without, humanMsg]
         })
         setTotalMessageCount(prev => {
@@ -224,6 +261,8 @@ export default function ChatPage() {
     } catch {
       setMessages(prev => prev.filter(m => m.id !== optimistic.id))
     } finally {
+      setSeen(false)
+      setTyping(false)
       setSending(false)
       inputRef.current?.focus()
     }
@@ -256,6 +295,9 @@ export default function ChatPage() {
     : false
   const hasMessageLimitReached = Boolean(messageUsage && messageUsage.remaining <= 0)
   const hasPlusMessagePlan = Boolean(messageUsage && messageUsage.limit >= PRACTICAL_UNLIMITED_THRESHOLD)
+
+  // Index of the last human message (to attach "Seen" only to it)
+  const lastHumanIndex = messages.reduce((acc, m, i) => m.senderType === 'HUMAN' ? i : acc, -1)
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col">
@@ -408,11 +450,18 @@ export default function ChatPage() {
                 <p className="text-zinc-600 text-sm max-w-xs">{agent.description.slice(0, 100)}...</p>
               </div>
             ) : (
-              messages.map(msg => (
-                <MessageBubble key={msg.id} message={msg} userAvatar={userAvatar} agentAvatar={agentAvatar} />
+              messages.map((msg, idx) => (
+                <MessageBubble
+                  key={msg.id}
+                  message={msg}
+                  userAvatar={userAvatar}
+                  agentAvatar={agentAvatar}
+                  // Show "Seen" only under the last human message while seen=true
+                  showSeen={seen && idx === lastHumanIndex}
+                />
               ))
             )}
-            {sending && <TypingIndicator agentAvatar={agentAvatar} />}
+            {typing && <TypingIndicator agentAvatar={agentAvatar} />}
             <div ref={bottomRef} />
           </div>
 

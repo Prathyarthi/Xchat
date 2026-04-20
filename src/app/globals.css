@@ -161,6 +161,7 @@ summary {
 .animate-float      { animation: float 4s ease-in-out infinite; }
 .animate-pulse-ring { animation: pulse-ring 2s ease-out infinite; }
 .animate-fade-up    { animation: fade-up 0.5s ease both; }
+.animate-fade-in    { animation: fade-in 0.2s ease-out; }
 
 @layer base {
   * {
